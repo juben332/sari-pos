@@ -5,20 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reports — Sari POS</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .period-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+    .period-tab{padding:8px 18px;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:0.875rem;font-weight:500;color:#374151;transition:all .15s;}
+    .period-tab.active{background:#2563eb;color:#fff;border-color:#2563eb;}
+    .custom-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+    .trend-table td,.trend-table th{padding:10px 14px;}
+    .bar{display:inline-block;height:10px;border-radius:4px;background:#2563eb;min-width:4px;vertical-align:middle;}
+    .delta-up{color:#16a34a;font-size:0.8rem;}
+    .delta-down{color:#dc2626;font-size:0.8rem;}
+    .stat-card__sub{font-size:0.75rem;color:#6b7280;margin-top:4px;}
+  </style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
-      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
-      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/pos.html"          class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html"      class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
       <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
       <div data-admin hidden>
         <div class="sidebar__divider">Admin</div>
         <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
-        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
-        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+        <a href="/reports.html"   class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html"     class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
       </div>
     </nav>
     <div class="sidebar__footer">
@@ -29,37 +40,79 @@
   </aside>
 
   <div class="main">
-    <div class="topbar"><span class="topbar__title">Reports</span></div>
+    <div class="topbar"><span class="topbar__title">📊 Reports & Statistics</span></div>
     <div class="content">
-      <!-- Summary Cards -->
-      <div class="stats-grid" id="summary-grid">
-        <div class="stat-card"><div class="stat-card__label">Today's Sales</div><div class="stat-card__value green" id="s-sales">—</div></div>
-        <div class="stat-card"><div class="stat-card__label">Transactions Today</div><div class="stat-card__value blue" id="s-txns">—</div></div>
-        <div class="stat-card"><div class="stat-card__label">Refunds Today</div><div class="stat-card__value red" id="s-refunds">—</div></div>
-        <div class="stat-card"><div class="stat-card__label">Total Products</div><div class="stat-card__value" id="s-products">—</div></div>
-        <div class="stat-card"><div class="stat-card__label">Low Stock Items</div><div class="stat-card__value amber" id="s-lowstock">—</div></div>
+
+      <!-- Period Selector -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:600;margin-bottom:12px;">Select Period</div>
+        <div class="period-tabs">
+          <button class="period-tab active" data-period="daily">Today</button>
+          <button class="period-tab" data-period="weekly">This Week</button>
+          <button class="period-tab" data-period="monthly">This Month</button>
+          <button class="period-tab" data-period="custom">Custom Range</button>
+        </div>
+        <div class="custom-range" id="custom-range" style="display:none;">
+          <input type="date" id="from-date" class="form-control" style="max-width:160px;" />
+          <span style="color:#6b7280;">to</span>
+          <input type="date" id="to-date" class="form-control" style="max-width:160px;" />
+          <button class="btn btn--primary" id="apply-custom">Apply</button>
+        </div>
+        <div id="period-label" style="font-size:0.82rem;color:#6b7280;"></div>
       </div>
 
-      <!-- Sales Report -->
-      <div class="card" style="margin-bottom:20px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <strong>Sales Report</strong>
-          <div style="display:flex;gap:8px;">
-            <input type="date" id="from-date" class="form-control" style="max-width:150px;" />
-            <input type="date" id="to-date" class="form-control" style="max-width:150px;" />
-            <button class="btn btn--primary" id="load-sales-btn">Load</button>
-          </div>
+      <!-- Summary Cards -->
+      <div class="stats-grid" style="margin-bottom:20px;" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card__label">Total Sales</div>
+          <div class="stat-card__value green" id="st-sales">—</div>
+          <div class="stat-card__sub" id="st-sales-sub"></div>
         </div>
-        <div id="sales-summary" style="font-size:0.9rem;margin-bottom:12px;"></div>
+        <div class="stat-card">
+          <div class="stat-card__label">Transactions</div>
+          <div class="stat-card__value blue" id="st-count">—</div>
+          <div class="stat-card__sub" id="st-count-sub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Avg Transaction</div>
+          <div class="stat-card__value" id="st-avg">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Discounts Given</div>
+          <div class="stat-card__value amber" id="st-discount">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Refunds</div>
+          <div class="stat-card__value red" id="st-refunds">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Net Revenue</div>
+          <div class="stat-card__value green" id="st-net">—</div>
+        </div>
+      </div>
+
+      <!-- Sales Trend -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:600;margin-bottom:12px;">📈 Sales Trend</div>
+        <div class="table-wrap">
+          <table class="trend-table">
+            <thead>
+              <tr><th>Date</th><th>Transactions</th><th>Sales</th><th>Discounts</th><th>Avg Sale</th><th>Bar</th></tr>
+            </thead>
+            <tbody id="trend-tbody">
+              <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Top Products -->
       <div class="card" style="margin-bottom:20px;">
-        <div style="font-weight:600;margin-bottom:12px;">Top Selling Products</div>
+        <div style="font-weight:600;margin-bottom:12px;">🏆 Top Selling Products</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
-            <tbody id="top-products-tbody"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+            <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th><th>% of Sales</th></tr></thead>
+            <tbody id="top-tbody"><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -69,11 +122,12 @@
         <div style="font-weight:600;margin-bottom:12px;">⚠️ Low Stock Items</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Product</th><th>Stock</th><th>Threshold</th></tr></thead>
-            <tbody id="low-stock-tbody"><tr><td colspan="3" class="empty-state">Loading...</td></tr></tbody>
+            <thead><tr><th>Product</th><th>Stock</th><th>Threshold</th><th>Status</th></tr></thead>
+            <tbody id="low-stock-tbody"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -82,73 +136,155 @@
 <script src="/js/toast.js"></script>
 <script src="/js/sidebar.js"></script>
 <script>
-  requireAuth();
+  requireAuth('admin');
   initSidebar('reports');
 
-  async function loadSummary() {
-    const s = await apiFetch('/reports/summary').catch(() => null);
-    if (!s) return;
-    document.getElementById('s-sales').textContent    = `₱${parseFloat(s.today_sales).toFixed(2)}`;
-    document.getElementById('s-txns').textContent     = s.today_transactions;
-    document.getElementById('s-refunds').textContent  = `₱${parseFloat(s.today_refunds).toFixed(2)}`;
-    document.getElementById('s-products').textContent = s.total_products;
-    document.getElementById('s-lowstock').textContent = s.low_stock_count;
+  const fmt = n => `₱${parseFloat(n||0).toFixed(2)}`;
+  const fmtDate = d => new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric' });
 
-    const tbody = document.getElementById('low-stock-tbody');
-    if (!s.low_stock_items.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="empty-state">All products are well stocked</td></tr>';
+  let activePeriod = 'daily';
+
+  // Period tabs
+  document.querySelectorAll('.period-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activePeriod = btn.dataset.period;
+      document.getElementById('custom-range').style.display = activePeriod === 'custom' ? 'flex' : 'none';
+      if (activePeriod !== 'custom') loadStats();
+    });
+  });
+
+  document.getElementById('apply-custom').addEventListener('click', () => {
+    const from = document.getElementById('from-date').value;
+    const to   = document.getElementById('to-date').value;
+    if (!from || !to) { showToast('Please select both dates', 'error'); return; }
+    if (from > to)    { showToast('From date must be before To date', 'error'); return; }
+    loadStats();
+  });
+
+  async function loadStats() {
+    setLoading(true);
+
+    const params = new URLSearchParams();
+    if (activePeriod === 'custom') {
+      params.set('from', document.getElementById('from-date').value);
+      params.set('to',   document.getElementById('to-date').value);
     } else {
-      tbody.innerHTML = s.low_stock_items.map(p => `
-        <tr>
-          <td>${p.name}</td>
-          <td><span class="badge badge--amber">${p.stock}</span></td>
-          <td>${p.low_stock_threshold}</td>
-        </tr>
-      `).join('');
+      params.set('period', activePeriod);
+    }
+
+    const [stats, summary] = await Promise.all([
+      apiFetch(`/reports/statistics?${params}`).catch(() => null),
+      apiFetch('/reports/summary').catch(() => null),
+    ]);
+
+    if (!stats) { setLoading(false); showToast('Failed to load statistics', 'error'); return; }
+
+    renderSummary(stats.summary);
+    renderTrend(stats.trend);
+    renderTopProducts(stats.top_products, stats.summary.total_sales);
+    if (summary) renderLowStock(summary.low_stock_items);
+    renderPeriodLabel(stats.period);
+    setLoading(false);
+  }
+
+  function renderSummary(s) {
+    const net = s.total_sales - s.total_discount - s.total_refunds;
+    document.getElementById('st-sales').textContent    = fmt(s.total_sales);
+    document.getElementById('st-count').textContent    = s.count;
+    document.getElementById('st-avg').textContent      = fmt(s.avg_transaction);
+    document.getElementById('st-discount').textContent = fmt(s.total_discount);
+    document.getElementById('st-refunds').textContent  = fmt(s.total_refunds);
+    document.getElementById('st-net').textContent      = fmt(net);
+  }
+
+  function renderTrend(trend) {
+    const tbody = document.getElementById('trend-tbody');
+    if (!trend.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No sales in this period</td></tr>';
+      return;
+    }
+    const maxSales = Math.max(...trend.map(d => d.sales));
+    tbody.innerHTML = trend.map(d => {
+      const avg = d.count > 0 ? d.sales / d.count : 0;
+      const barW = maxSales > 0 ? Math.round((d.sales / maxSales) * 120) : 0;
+      return `<tr>
+        <td><strong>${fmtDate(d.date)}</strong><br><small style="color:#9ca3af;">${d.date}</small></td>
+        <td>${d.count}</td>
+        <td style="color:#16a34a;font-weight:600;">${fmt(d.sales)}</td>
+        <td style="color:#dc2626;">-${fmt(d.discounts)}</td>
+        <td>${fmt(avg)}</td>
+        <td><span class="bar" style="width:${barW}px;"></span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderTopProducts(products, totalSales) {
+    const tbody = document.getElementById('top-tbody');
+    if (!products.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No sales data</td></tr>';
+      return;
+    }
+    tbody.innerHTML = products.map((p, i) => {
+      const pct = totalSales > 0 ? ((p.revenue / totalSales) * 100).toFixed(1) : '0.0';
+      return `<tr>
+        <td><strong>${i + 1}</strong></td>
+        <td>${p.product_name}</td>
+        <td>${p.qty_sold}</td>
+        <td style="color:#16a34a;font-weight:600;">${fmt(p.revenue)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="flex:1;background:#f3f4f6;border-radius:4px;height:8px;">
+              <div style="width:${pct}%;background:#2563eb;height:8px;border-radius:4px;"></div>
+            </div>
+            <span style="font-size:0.8rem;color:#6b7280;min-width:36px;">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderLowStock(items) {
+    const tbody = document.getElementById('low-stock-tbody');
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">All products well stocked ✅</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(p => {
+      const pct = Math.round((p.stock / p.low_stock_threshold) * 100);
+      const badge = p.stock === 0 ? 'badge--red' : 'badge--amber';
+      const label = p.stock === 0 ? 'Out of Stock' : 'Low Stock';
+      return `<tr>
+        <td>${p.name}</td>
+        <td><strong>${p.stock}</strong></td>
+        <td>${p.low_stock_threshold}</td>
+        <td><span class="badge ${badge}">${label}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderPeriodLabel(period) {
+    const from = new Date(period.from).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+    const to   = new Date(period.to).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+    document.getElementById('period-label').textContent = `Showing data from ${from} to ${to}`;
+  }
+
+  function setLoading(on) {
+    if (on) {
+      document.getElementById('trend-tbody').innerHTML   = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+      document.getElementById('top-tbody').innerHTML     = '<tr><td colspan="5" class="empty-state">Loading...</td></tr>';
+      document.getElementById('low-stock-tbody').innerHTML = '<tr><td colspan="4" class="empty-state">Loading...</td></tr>';
     }
   }
 
-  async function loadTopProducts() {
-    const data = await apiFetch('/reports/top-products?limit=10').catch(() => []);
-    const tbody = document.getElementById('top-products-tbody');
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No data</td></tr>'; return; }
-    tbody.innerHTML = data.map((p, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${p.product_name}</td>
-        <td>${p.qty_sold}</td>
-        <td>₱${parseFloat(p.revenue).toFixed(2)}</td>
-      </tr>
-    `).join('');
-  }
-
-  document.getElementById('load-sales-btn').addEventListener('click', async () => {
-    const from = document.getElementById('from-date').value;
-    const to   = document.getElementById('to-date').value;
-    const params = new URLSearchParams();
-    if (from) params.set('from', from + 'T00:00:00');
-    if (to)   params.set('to', to + 'T23:59:59');
-
-    const data = await apiFetch(`/reports/sales?${params}`).catch(() => null);
-    if (!data) return;
-    document.getElementById('sales-summary').innerHTML = `
-      <div style="display:flex;gap:24px;flex-wrap:wrap;">
-        <div><span style="color:#6b7280;">Transactions:</span> <strong>${data.count}</strong></div>
-        <div><span style="color:#6b7280;">Total Sales:</span> <strong style="color:#16a34a;">₱${parseFloat(data.total_sales).toFixed(2)}</strong></div>
-        <div><span style="color:#6b7280;">Total Discounts:</span> <strong style="color:#dc2626;">-₱${parseFloat(data.total_discount).toFixed(2)}</strong></div>
-      </div>
-    `;
-  });
-
-  // Set default dates (this month)
+  // Init custom date defaults
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  document.getElementById('from-date').value = firstDay.toISOString().split('T')[0];
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  document.getElementById('from-date').value = firstOfMonth.toISOString().split('T')[0];
   document.getElementById('to-date').value   = today.toISOString().split('T')[0];
 
-  loadSummary();
-  loadTopProducts();
-  document.getElementById('load-sales-btn').click();
+  loadStats();
 </script>
 </body>
 </html>

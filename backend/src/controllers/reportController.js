@@ -93,4 +93,92 @@ const summary = async (req, res) => {
   });
 };
 
-module.exports = { sales, topProducts, stockMovements, summary };
+const statistics = async (req, res) => {
+  const { period, from, to } = req.query;
+  const now = new Date();
+  let startDate, endDate;
+
+  if (from && to) {
+    startDate = new Date(from + 'T00:00:00');
+    endDate   = new Date(to   + 'T23:59:59');
+  } else {
+    switch (period) {
+      case 'weekly':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - now.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'monthly':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default: // daily
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+    }
+    endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  const [txnRes, itemsRes, returnsRes] = await Promise.all([
+    adminClient
+      .from('transactions')
+      .select('id, total, discount_amount, created_at')
+      .eq('status', 'completed')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .order('created_at', { ascending: true }),
+
+    adminClient
+      .from('transaction_items')
+      .select('product_id, product_name, quantity, subtotal, transactions!inner(created_at, status)')
+      .eq('transactions.status', 'completed')
+      .gte('transactions.created_at', startDate.toISOString())
+      .lte('transactions.created_at', endDate.toISOString()),
+
+    adminClient
+      .from('returns')
+      .select('refund_amount')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString()),
+  ]);
+
+  if (txnRes.error) return res.status(500).json({ error: txnRes.error.message });
+
+  const transactions = txnRes.data || [];
+  const totalSales    = transactions.reduce((s, t) => s + parseFloat(t.total), 0);
+  const totalDiscount = transactions.reduce((s, t) => s + parseFloat(t.discount_amount), 0);
+  const count         = transactions.length;
+  const avgTxn        = count > 0 ? totalSales / count : 0;
+  const totalRefunds  = (returnsRes.data || []).reduce((s, r) => s + parseFloat(r.refund_amount), 0);
+
+  // Group by day
+  const dayMap = {};
+  for (const t of transactions) {
+    const day = t.created_at.substring(0, 10);
+    if (!dayMap[day]) dayMap[day] = { date: day, sales: 0, count: 0, discounts: 0 };
+    dayMap[day].sales     += parseFloat(t.total);
+    dayMap[day].count     += 1;
+    dayMap[day].discounts += parseFloat(t.discount_amount);
+  }
+
+  // Top products
+  const prodMap = {};
+  for (const item of itemsRes.data || []) {
+    const key = item.product_id || item.product_name;
+    if (!prodMap[key]) prodMap[key] = { product_name: item.product_name, qty_sold: 0, revenue: 0 };
+    prodMap[key].qty_sold += item.quantity;
+    prodMap[key].revenue  += parseFloat(item.subtotal);
+  }
+  const topProducts = Object.values(prodMap)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  res.json({
+    period: { from: startDate.toISOString(), to: endDate.toISOString() },
+    summary: { total_sales: totalSales, total_discount: totalDiscount, total_refunds: totalRefunds, count, avg_transaction: avgTxn },
+    trend: Object.values(dayMap),
+    top_products: topProducts,
+  });
+};
+
+module.exports = { sales, topProducts, stockMovements, summary, statistics };

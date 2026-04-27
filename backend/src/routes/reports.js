@@ -6,5 +6,6 @@ router.get('/summary', auth, ctrl.summary);
 router.get('/sales', auth, ctrl.sales);
 router.get('/top-products', auth, ctrl.topProducts);
 router.get('/stock-movements', auth, ctrl.stockMovements);
+router.get('/statistics', auth, ctrl.statistics);
 
 module.exports = router;
