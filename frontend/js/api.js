@@ -1,4 +1,7 @@
-const API_BASE = window.API_BASE || '/api';
+const API_BASE = window.API_BASE ||
+  (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? 'http://localhost:4000/api'
+    : '/api');
 
 const getToken = () => localStorage.getItem('sari_token');
 const getUser  = () => JSON.parse(localStorage.getItem('sari_user') || 'null');
