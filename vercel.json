@@ -12,6 +12,14 @@
       "dest": "backend/src/app.js"
     },
     {
+      "src": "/health",
+      "dest": "backend/src/app.js"
+    },
+    {
+      "src": "/",
+      "dest": "frontend/login.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "frontend/$1"
     }
