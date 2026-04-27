@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Returns — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><span class="topbar__title">Returns</span></div>
+    <div class="content">
+      <div class="page-header">
+        <h1 class="page-title">Process Return</h1>
+        <button class="btn btn--primary" id="new-return-btn">+ New Return</button>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:600;margin-bottom:12px;">Return History</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Ref #</th><th>Transaction</th><th>Processed By</th><th>Amount</th><th>Method</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="returns-tbody"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Return Modal -->
+<div class="modal-backdrop" id="return-modal" hidden>
+  <div class="modal" style="max-width:600px;">
+    <div class="modal__header">
+      <span class="modal__title">Process Return</span>
+      <button class="modal__close" id="close-return-modal">✕</button>
+    </div>
+
+    <!-- Step 1: Find transaction -->
+    <div id="step-1">
+      <div class="form-group">
+        <label class="form-label">Transaction Reference # or ID</label>
+        <div class="input-group">
+          <input type="text" id="txn-search" class="form-control" placeholder="TXN-..." />
+          <button class="btn btn--primary" id="find-txn-btn">Find</button>
+        </div>
+      </div>
+      <div id="txn-info" hidden></div>
+    </div>
+
+    <!-- Step 2: Select items -->
+    <div id="step-2" hidden>
+      <div style="font-weight:600;margin-bottom:12px;">Select items to return:</div>
+      <div id="return-items-list"></div>
+
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label">Reason *</label>
+        <input type="text" id="return-reason" class="form-control" placeholder="Defective, wrong item, etc." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Refund Method *</label>
+        <select id="refund-method" class="form-control">
+          <option value="cash">Cash</option>
+          <option value="store_credit">Store Credit</option>
+          <option value="exchange">Exchange</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input type="text" id="return-notes" class="form-control" />
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn--outline" id="back-to-step1">Back</button>
+        <button class="btn btn--success" id="submit-return">Submit Return</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="detail-modal" hidden>
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">Return Detail</span>
+      <button class="modal__close" id="close-detail">✕</button>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  requireAuth();
+  initSidebar('returns');
+
+  let currentTxn = null;
+
+  async function loadReturns() {
+    const data = await apiFetch('/returns').catch(() => ({ data: [] }));
+    const tbody = document.getElementById('returns-tbody');
+    if (!data.data?.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No returns yet</td></tr>'; return; }
+    tbody.innerHTML = data.data.map(r => `
+      <tr>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td><code>${r.reference_no}</code></td>
+        <td><code>${r.transaction_id.slice(0,8)}...</code></td>
+        <td>${r.profiles?.full_name || '—'}</td>
+        <td style="color:#dc2626;font-weight:600;">-₱${parseFloat(r.refund_amount).toFixed(2)}</td>
+        <td><span class="badge badge--blue">${r.refund_method}</span></td>
+        <td><button class="btn btn--outline btn--sm" onclick="openDetail('${r.id}')">View</button></td>
+      </tr>
+    `).join('');
+  }
+
+  // New Return
+  document.getElementById('new-return-btn').addEventListener('click', () => {
+    currentTxn = null;
+    document.getElementById('txn-search').value = '';
+    document.getElementById('txn-info').setAttribute('hidden','');
+    document.getElementById('step-2').setAttribute('hidden','');
+    document.getElementById('step-1').removeAttribute('hidden');
+    document.getElementById('return-modal').removeAttribute('hidden');
+  });
+
+  document.getElementById('close-return-modal').addEventListener('click', () => {
+    document.getElementById('return-modal').setAttribute('hidden','');
+  });
+
+  document.getElementById('find-txn-btn').addEventListener('click', async () => {
+    const val = document.getElementById('txn-search').value.trim();
+    if (!val) return;
+
+    // Try searching by reference_no first via list, then by ID
+    try {
+      const res = await apiFetch('/transactions?limit=100');
+      let txn = res.data.find(t => t.reference_no === val || t.id === val);
+      if (!txn) {
+        txn = await apiFetch(`/transactions/${val}`).catch(() => null);
+      }
+      if (!txn) { toast('Transaction not found', 'error'); return; }
+      if (txn.status === 'voided') { toast('Cannot return from a voided transaction', 'error'); return; }
+
+      currentTxn = txn;
+      const info = document.getElementById('txn-info');
+      info.removeAttribute('hidden');
+      info.innerHTML = `
+        <div class="card" style="margin-bottom:12px;font-size:0.85rem;">
+          <strong>${txn.reference_no}</strong> — ${new Date(txn.created_at).toLocaleDateString()}<br>
+          Total: ₱${parseFloat(txn.total).toFixed(2)} | Cashier: ${txn.profiles?.full_name || '—'}
+        </div>
+      `;
+
+      // Build return items list
+      const list = document.getElementById('return-items-list');
+      list.innerHTML = txn.transaction_items.map(item => `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
+          <input type="checkbox" id="ri-${item.id}" data-item-id="${item.id}" data-max="${item.quantity}" />
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.85rem;">${item.product_name}</div>
+            <div style="font-size:0.75rem;color:#6b7280;">₱${parseFloat(item.unit_price).toFixed(2)} × ${item.quantity}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.8rem;">Qty:</label>
+            <input type="number" id="rq-${item.id}" class="form-control" style="width:70px;padding:4px 8px;" min="1" max="${item.quantity}" value="${item.quantity}" disabled />
+          </div>
+        </div>
+      `).join('');
+
+      // Enable/disable qty inputs based on checkbox
+      txn.transaction_items.forEach(item => {
+        document.getElementById(`ri-${item.id}`).addEventListener('change', (e) => {
+          document.getElementById(`rq-${item.id}`).disabled = !e.target.checked;
+        });
+      });
+
+      document.getElementById('step-1').setAttribute('hidden','');
+      document.getElementById('step-2').removeAttribute('hidden');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  document.getElementById('back-to-step1').addEventListener('click', () => {
+    document.getElementById('step-2').setAttribute('hidden','');
+    document.getElementById('step-1').removeAttribute('hidden');
+  });
+
+  document.getElementById('submit-return').addEventListener('click', async () => {
+    if (!currentTxn) return;
+    const reason = document.getElementById('return-reason').value.trim();
+    if (!reason) { toast('Reason is required', 'error'); return; }
+
+    const items = [];
+    currentTxn.transaction_items.forEach(item => {
+      const cb = document.getElementById(`ri-${item.id}`);
+      if (cb.checked) {
+        items.push({
+          transaction_item_id: item.id,
+          quantity: parseInt(document.getElementById(`rq-${item.id}`).value),
+        });
+      }
+    });
+
+    if (!items.length) { toast('Select at least one item', 'error'); return; }
+
+    try {
+      await apiFetch('/returns', {
+        method: 'POST',
+        body: {
+          transaction_id: currentTxn.id,
+          items,
+          reason,
+          refund_method: document.getElementById('refund-method').value,
+          notes: document.getElementById('return-notes').value || null,
+        },
+      });
+      document.getElementById('return-modal').setAttribute('hidden','');
+      loadReturns();
+      toast('Return processed successfully', 'success');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  async function openDetail(id) {
+    const r = await apiFetch(`/returns/${id}`).catch(() => null);
+    if (!r) return;
+    document.getElementById('detail-body').innerHTML = `
+      <p><strong>Ref:</strong> ${r.reference_no}</p>
+      <p><strong>Date:</strong> ${new Date(r.created_at).toLocaleString()}</p>
+      <p><strong>Reason:</strong> ${r.reason}</p>
+      <p><strong>Method:</strong> ${r.refund_method}</p>
+      ${r.notes ? `<p><strong>Notes:</strong> ${r.notes}</p>` : ''}
+      <hr style="margin:12px 0;" />
+      <table style="width:100%;font-size:0.85rem;">
+        <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
+        <tbody>${(r.return_items||[]).map(i => `
+          <tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.unit_price).toFixed(2)}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>
+        `).join('')}</tbody>
+      </table>
+      <div style="margin-top:12px;text-align:right;color:#dc2626;font-weight:700;">
+        Refund: -₱${parseFloat(r.refund_amount).toFixed(2)}
+      </div>
+    `;
+    document.getElementById('detail-modal').removeAttribute('hidden');
+  }
+
+  document.getElementById('close-detail').addEventListener('click', () => {
+    document.getElementById('detail-modal').setAttribute('hidden','');
+  });
+
+  loadReturns();
+</script>
+</body>
+</html>

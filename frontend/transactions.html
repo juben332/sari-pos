@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transactions — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><span class="topbar__title">Transactions</span></div>
+    <div class="content">
+      <div class="page-header">
+        <h1 class="page-title">Transaction History</h1>
+      </div>
+      <div class="search-bar">
+        <input type="date" id="from-date" class="form-control" style="max-width:160px;" />
+        <input type="date" id="to-date" class="form-control" style="max-width:160px;" />
+        <button class="btn btn--outline" id="filter-btn">Filter</button>
+        <button class="btn btn--outline" id="reset-btn">Reset</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Ref #</th><th>Cashier</th><th>Subtotal</th><th>Discount</th><th>Total</th><th>Cash</th><th>Change</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="txn-tbody"><tr><td colspan="10" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-backdrop" id="detail-modal" hidden>
+  <div class="modal" style="max-width:560px;">
+    <div class="modal__header">
+      <span class="modal__title">Transaction Detail</span>
+      <button class="modal__close" id="close-detail">✕</button>
+    </div>
+    <div id="detail-body"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn--danger" id="void-btn" hidden>Void Transaction</button>
+      <button class="btn btn--outline" id="close-detail2">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  const user = requireAuth();
+  initSidebar('transactions');
+
+  let page = 1;
+  let currentTxnId = null;
+
+  async function load() {
+    const from = document.getElementById('from-date').value;
+    const to   = document.getElementById('to-date').value;
+    const params = new URLSearchParams({ page, limit: 30 });
+    if (from) params.set('from', from + 'T00:00:00');
+    if (to)   params.set('to', to + 'T23:59:59');
+
+    const res = await apiFetch(`/transactions?${params}`).catch(() => ({ data: [], total: 0 }));
+    const tbody = document.getElementById('txn-tbody');
+
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No transactions found</td></tr>'; return; }
+
+    tbody.innerHTML = res.data.map(t => `
+      <tr>
+        <td>${new Date(t.created_at).toLocaleString()}</td>
+        <td><code>${t.reference_no}</code></td>
+        <td>${t.profiles?.full_name || '—'}</td>
+        <td>₱${parseFloat(t.subtotal).toFixed(2)}</td>
+        <td>${t.discount_type !== 'none' ? `${t.discount_type} (-₱${parseFloat(t.discount_amount).toFixed(2)})` : '—'}</td>
+        <td><strong>₱${parseFloat(t.total).toFixed(2)}</strong></td>
+        <td>₱${parseFloat(t.cash_tendered).toFixed(2)}</td>
+        <td>₱${parseFloat(t.change_due).toFixed(2)}</td>
+        <td><span class="badge ${t.status === 'completed' ? 'badge--green' : 'badge--red'}">${t.status}</span></td>
+        <td><button class="btn btn--outline btn--sm" onclick="openDetail('${t.id}')">View</button></td>
+      </tr>
+    `).join('');
+
+    // Pagination
+    const totalPages = Math.ceil(res.total / 30);
+    const pg = document.getElementById('pagination');
+    pg.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = `page-btn ${i === page ? 'active' : ''}`;
+      btn.textContent = i;
+      btn.onclick = () => { page = i; load(); };
+      pg.appendChild(btn);
+    }
+  }
+
+  async function openDetail(id) {
+    currentTxnId = id;
+    const txn = await apiFetch(`/transactions/${id}`).catch(() => null);
+    if (!txn) return;
+    const el = document.getElementById('detail-body');
+    el.innerHTML = `
+      <p><strong>Ref:</strong> ${txn.reference_no}</p>
+      <p><strong>Date:</strong> ${new Date(txn.created_at).toLocaleString()}</p>
+      <p><strong>Cashier:</strong> ${txn.profiles?.full_name || '—'}</p>
+      <p><strong>Discount:</strong> ${txn.discount_type}</p>
+      <hr style="margin:12px 0;" />
+      <table style="width:100%;font-size:0.85rem;">
+        <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
+        <tbody>${(txn.transaction_items || []).map(i => `
+          <tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.unit_price).toFixed(2)}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>
+        `).join('')}</tbody>
+      </table>
+      <div style="margin-top:12px;text-align:right;">
+        <strong>Total: ₱${parseFloat(txn.total).toFixed(2)}</strong>
+      </div>
+    `;
+
+    const voidBtn = document.getElementById('void-btn');
+    if (user.role === 'admin' && txn.status === 'completed') {
+      voidBtn.removeAttribute('hidden');
+    } else {
+      voidBtn.setAttribute('hidden', '');
+    }
+
+    document.getElementById('detail-modal').removeAttribute('hidden');
+  }
+
+  document.getElementById('void-btn').addEventListener('click', async () => {
+    if (!confirm('Void this transaction? Stock will be restored.')) return;
+    try {
+      await apiFetch(`/transactions/${currentTxnId}/void`, { method: 'PATCH' });
+      document.getElementById('detail-modal').setAttribute('hidden', '');
+      load();
+      toast('Transaction voided', 'success');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  ['close-detail','close-detail2'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => document.getElementById('detail-modal').setAttribute('hidden',''));
+  });
+
+  document.getElementById('filter-btn').addEventListener('click', () => { page = 1; load(); });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    document.getElementById('from-date').value = '';
+    document.getElementById('to-date').value = '';
+    page = 1; load();
+  });
+
+  load();
+</script>
+</body>
+</html>

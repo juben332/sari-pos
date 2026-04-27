@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><span class="topbar__title">Reports</span></div>
+    <div class="content">
+      <!-- Summary Cards -->
+      <div class="stats-grid" id="summary-grid">
+        <div class="stat-card"><div class="stat-card__label">Today's Sales</div><div class="stat-card__value green" id="s-sales">—</div></div>
+        <div class="stat-card"><div class="stat-card__label">Transactions Today</div><div class="stat-card__value blue" id="s-txns">—</div></div>
+        <div class="stat-card"><div class="stat-card__label">Refunds Today</div><div class="stat-card__value red" id="s-refunds">—</div></div>
+        <div class="stat-card"><div class="stat-card__label">Total Products</div><div class="stat-card__value" id="s-products">—</div></div>
+        <div class="stat-card"><div class="stat-card__label">Low Stock Items</div><div class="stat-card__value amber" id="s-lowstock">—</div></div>
+      </div>
+
+      <!-- Sales Report -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <strong>Sales Report</strong>
+          <div style="display:flex;gap:8px;">
+            <input type="date" id="from-date" class="form-control" style="max-width:150px;" />
+            <input type="date" id="to-date" class="form-control" style="max-width:150px;" />
+            <button class="btn btn--primary" id="load-sales-btn">Load</button>
+          </div>
+        </div>
+        <div id="sales-summary" style="font-size:0.9rem;margin-bottom:12px;"></div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:600;margin-bottom:12px;">Top Selling Products</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+            <tbody id="top-products-tbody"><tr><td colspan="4" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Low Stock -->
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:12px;">⚠️ Low Stock Items</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Product</th><th>Stock</th><th>Threshold</th></tr></thead>
+            <tbody id="low-stock-tbody"><tr><td colspan="3" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  requireAuth();
+  initSidebar('reports');
+
+  async function loadSummary() {
+    const s = await apiFetch('/reports/summary').catch(() => null);
+    if (!s) return;
+    document.getElementById('s-sales').textContent    = `₱${parseFloat(s.today_sales).toFixed(2)}`;
+    document.getElementById('s-txns').textContent     = s.today_transactions;
+    document.getElementById('s-refunds').textContent  = `₱${parseFloat(s.today_refunds).toFixed(2)}`;
+    document.getElementById('s-products').textContent = s.total_products;
+    document.getElementById('s-lowstock').textContent = s.low_stock_count;
+
+    const tbody = document.getElementById('low-stock-tbody');
+    if (!s.low_stock_items.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty-state">All products are well stocked</td></tr>';
+    } else {
+      tbody.innerHTML = s.low_stock_items.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td><span class="badge badge--amber">${p.stock}</span></td>
+          <td>${p.low_stock_threshold}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  async function loadTopProducts() {
+    const data = await apiFetch('/reports/top-products?limit=10').catch(() => []);
+    const tbody = document.getElementById('top-products-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No data</td></tr>'; return; }
+    tbody.innerHTML = data.map((p, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.product_name}</td>
+        <td>${p.qty_sold}</td>
+        <td>₱${parseFloat(p.revenue).toFixed(2)}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('load-sales-btn').addEventListener('click', async () => {
+    const from = document.getElementById('from-date').value;
+    const to   = document.getElementById('to-date').value;
+    const params = new URLSearchParams();
+    if (from) params.set('from', from + 'T00:00:00');
+    if (to)   params.set('to', to + 'T23:59:59');
+
+    const data = await apiFetch(`/reports/sales?${params}`).catch(() => null);
+    if (!data) return;
+    document.getElementById('sales-summary').innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div><span style="color:#6b7280;">Transactions:</span> <strong>${data.count}</strong></div>
+        <div><span style="color:#6b7280;">Total Sales:</span> <strong style="color:#16a34a;">₱${parseFloat(data.total_sales).toFixed(2)}</strong></div>
+        <div><span style="color:#6b7280;">Total Discounts:</span> <strong style="color:#dc2626;">-₱${parseFloat(data.total_discount).toFixed(2)}</strong></div>
+      </div>
+    `;
+  });
+
+  // Set default dates (this month)
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  document.getElementById('from-date').value = firstDay.toISOString().split('T')[0];
+  document.getElementById('to-date').value   = today.toISOString().split('T')[0];
+
+  loadSummary();
+  loadTopProducts();
+  document.getElementById('load-sales-btn').click();
+</script>
+</body>
+</html>

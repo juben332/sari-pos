@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><span class="topbar__title">Staff Management</span></div>
+    <div class="content">
+      <div class="page-header">
+        <h1 class="page-title">Staff Accounts</h1>
+        <button class="btn btn--primary" id="add-staff-btn">+ Add Staff</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="staff-tbody"><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Modal -->
+<div class="modal-backdrop" id="staff-modal" hidden>
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title" id="modal-title">Add Staff</span>
+      <button class="modal__close" id="close-modal">✕</button>
+    </div>
+    <form id="staff-form">
+      <input type="hidden" id="staff-id" />
+      <div id="new-user-fields">
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" id="staff-email" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="password" id="staff-password" class="form-control" placeholder="Min 6 characters" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input type="text" id="staff-name" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <select id="staff-role" class="form-control">
+          <option value="cashier">Cashier</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group" id="active-field" hidden>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="staff-active" /> Active
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn--outline" id="cancel-modal">Cancel</button>
+        <button type="submit" class="btn btn--primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-backdrop" id="pw-modal" hidden>
+  <div class="modal" style="max-width:360px;">
+    <div class="modal__header">
+      <span class="modal__title">Reset Password</span>
+      <button class="modal__close" id="close-pw">✕</button>
+    </div>
+    <input type="hidden" id="pw-staff-id" />
+    <div class="form-group">
+      <label class="form-label">New Password</label>
+      <input type="password" id="new-password" class="form-control" placeholder="Min 6 characters" />
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn--outline" id="cancel-pw">Cancel</button>
+      <button class="btn btn--primary" id="save-pw">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  requireAuth('admin');
+  initSidebar('staff');
+
+  async function loadStaff() {
+    const data = await apiFetch('/staff').catch(() => []);
+    const tbody = document.getElementById('staff-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No staff found</td></tr>'; return; }
+    tbody.innerHTML = data.map(s => `
+      <tr>
+        <td><strong>${s.full_name}</strong></td>
+        <td><span class="badge ${s.role === 'admin' ? 'badge--blue' : 'badge--gray'}">${s.role}</span></td>
+        <td><span class="badge ${s.is_active ? 'badge--green' : 'badge--red'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>${new Date(s.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn btn--outline btn--sm" onclick="openEdit(${JSON.stringify(s).replace(/"/g, '&quot;')})">Edit</button>
+          <button class="btn btn--outline btn--sm" onclick="openPwModal('${s.id}')">Password</button>
+          <button class="btn btn--${s.is_active ? 'danger' : 'success'} btn--sm" onclick="toggleActive('${s.id}', ${!s.is_active})">${s.is_active ? 'Deactivate' : 'Activate'}</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('add-staff-btn').addEventListener('click', () => {
+    document.getElementById('modal-title').textContent = 'Add Staff';
+    document.getElementById('staff-form').reset();
+    document.getElementById('staff-id').value = '';
+    document.getElementById('new-user-fields').removeAttribute('hidden');
+    document.getElementById('active-field').setAttribute('hidden','');
+    document.getElementById('staff-modal').removeAttribute('hidden');
+  });
+
+  function openEdit(s) {
+    document.getElementById('modal-title').textContent = 'Edit Staff';
+    document.getElementById('staff-id').value = s.id;
+    document.getElementById('staff-name').value = s.full_name;
+    document.getElementById('staff-role').value = s.role;
+    document.getElementById('staff-active').checked = s.is_active;
+    document.getElementById('new-user-fields').setAttribute('hidden','');
+    document.getElementById('active-field').removeAttribute('hidden');
+    document.getElementById('staff-modal').removeAttribute('hidden');
+  }
+
+  ['close-modal','cancel-modal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => document.getElementById('staff-modal').setAttribute('hidden',''));
+  });
+
+  document.getElementById('staff-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('staff-id').value;
+    try {
+      if (id) {
+        await apiFetch(`/staff/${id}`, {
+          method: 'PUT',
+          body: {
+            full_name: document.getElementById('staff-name').value,
+            role: document.getElementById('staff-role').value,
+            is_active: document.getElementById('staff-active').checked,
+          },
+        });
+      } else {
+        await apiFetch('/staff', {
+          method: 'POST',
+          body: {
+            email: document.getElementById('staff-email').value,
+            password: document.getElementById('staff-password').value,
+            full_name: document.getElementById('staff-name').value,
+            role: document.getElementById('staff-role').value,
+          },
+        });
+      }
+      document.getElementById('staff-modal').setAttribute('hidden','');
+      loadStaff();
+      toast(id ? 'Staff updated' : 'Staff created', 'success');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  async function toggleActive(id, active) {
+    try {
+      await apiFetch(`/staff/${id}`, { method: 'PUT', body: { is_active: active } });
+      loadStaff();
+      toast(active ? 'Staff activated' : 'Staff deactivated', 'success');
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  function openPwModal(id) {
+    document.getElementById('pw-staff-id').value = id;
+    document.getElementById('new-password').value = '';
+    document.getElementById('pw-modal').removeAttribute('hidden');
+  }
+
+  ['close-pw','cancel-pw'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => document.getElementById('pw-modal').setAttribute('hidden',''));
+  });
+
+  document.getElementById('save-pw').addEventListener('click', async () => {
+    const id = document.getElementById('pw-staff-id').value;
+    const pw = document.getElementById('new-password').value;
+    if (pw.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+    try {
+      await apiFetch(`/staff/${id}/password`, { method: 'PATCH', body: { password: pw } });
+      document.getElementById('pw-modal').setAttribute('hidden','');
+      toast('Password updated', 'success');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  loadStaff();
+</script>
+</body>
+</html>
