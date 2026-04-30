@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -29,7 +30,10 @@
   </aside>
 
   <div class="main">
-    <div class="topbar"><span class="topbar__title">Returns</span></div>
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">Returns</span>
+    </div>
     <div class="content">
       <div class="page-header">
         <h1 class="page-title">Process Return</h1>
@@ -133,10 +137,23 @@
         <td>${r.profiles?.full_name || '—'}</td>
         <td style="color:#dc2626;font-weight:600;">-₱${parseFloat(r.refund_amount).toFixed(2)}</td>
         <td><span class="badge badge--blue">${r.refund_method}</span></td>
-        <td><button class="btn btn--outline btn--sm" onclick="openDetail('${r.id}')">View</button></td>
+        <td><button class="btn btn--outline btn--sm" data-return-id="${r.id}">View</button></td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('button[data-return-id]').forEach(btn => {
+      btn.addEventListener('click', () => openDetail(btn.dataset.returnId));
+    });
   }
+
+  function closeReturnModal() { document.getElementById('return-modal').setAttribute('hidden',''); }
+  function closeDetailModal() { document.getElementById('detail-modal').setAttribute('hidden',''); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('return-modal').hidden) closeReturnModal();
+    if (!document.getElementById('detail-modal').hidden) closeDetailModal();
+  });
 
   // New Return
   document.getElementById('new-return-btn').addEventListener('click', () => {
@@ -148,15 +165,12 @@
     document.getElementById('return-modal').removeAttribute('hidden');
   });
 
-  document.getElementById('close-return-modal').addEventListener('click', () => {
-    document.getElementById('return-modal').setAttribute('hidden','');
-  });
+  document.getElementById('close-return-modal').addEventListener('click', closeReturnModal);
 
   document.getElementById('find-txn-btn').addEventListener('click', async () => {
     const val = document.getElementById('txn-search').value.trim();
     if (!val) return;
 
-    // Try searching by reference_no first via list, then by ID
     try {
       const res = await apiFetch('/transactions?limit=100');
       let txn = res.data.find(t => t.reference_no === val || t.id === val);
@@ -176,7 +190,6 @@
         </div>
       `;
 
-      // Build return items list
       const list = document.getElementById('return-items-list');
       list.innerHTML = txn.transaction_items.map(item => `
         <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
@@ -192,7 +205,6 @@
         </div>
       `).join('');
 
-      // Enable/disable qty inputs based on checkbox
       txn.transaction_items.forEach(item => {
         document.getElementById(`ri-${item.id}`).addEventListener('change', (e) => {
           document.getElementById(`rq-${item.id}`).disabled = !e.target.checked;
@@ -238,7 +250,7 @@
           notes: document.getElementById('return-notes').value || null,
         },
       });
-      document.getElementById('return-modal').setAttribute('hidden','');
+      closeReturnModal();
       loadReturns();
       toast('Return processed successfully', 'success');
     } catch (err) { toast(err.message, 'error'); }
@@ -267,9 +279,7 @@
     document.getElementById('detail-modal').removeAttribute('hidden');
   }
 
-  document.getElementById('close-detail').addEventListener('click', () => {
-    document.getElementById('detail-modal').setAttribute('hidden','');
-  });
+  document.getElementById('close-detail').addEventListener('click', closeDetailModal);
 
   loadReturns();
 </script>

@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -30,6 +31,7 @@
 
   <div class="main">
     <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
       <span class="topbar__title">Inventory</span>
     </div>
     <div class="content">
@@ -147,6 +149,7 @@
 
   let categories = [];
   let showLowStockOnly = false;
+  const productMap = new Map();
 
   async function loadCategories() {
     categories = await apiFetch('/categories').catch(() => []);
@@ -171,6 +174,9 @@
     let data = await apiFetch(`/products?${params}`).catch(() => []);
     if (showLowStockOnly) data = data.filter(p => p.stock <= p.low_stock_threshold);
 
+    productMap.clear();
+    data.forEach(p => productMap.set(p.id, p));
+
     const tbody = document.getElementById('product-tbody');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No products found</td></tr>'; return; }
 
@@ -182,16 +188,26 @@
         <td>₱${parseFloat(p.price).toFixed(2)}</td>
         <td>₱${parseFloat(p.cost_price).toFixed(2)}</td>
         <td>
-          <span class="badge ${p.stock <= p.low_stock_threshold ? 'badge--amber' : 'badge--green'}">${p.stock}</span>
+          <span class="badge ${p.stock === 0 ? 'badge--red' : p.stock <= p.low_stock_threshold ? 'badge--amber' : 'badge--green'}">${p.stock}</span>
         </td>
         <td>${p.low_stock_threshold}</td>
         <td>
-          <button class="btn btn--outline btn--sm" onclick="openEditModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">Edit</button>
-          <button class="btn btn--outline btn--sm" onclick="openRestock('${p.id}','${p.name}',${p.stock})">Stock</button>
-          <button class="btn btn--danger btn--sm" onclick="deleteProduct('${p.id}')">Delete</button>
+          <button class="btn btn--outline btn--sm" data-action="edit" data-id="${p.id}">Edit</button>
+          <button class="btn btn--outline btn--sm" data-action="stock" data-id="${p.id}">Stock</button>
+          <button class="btn btn--danger btn--sm" data-action="delete" data-id="${p.id}">Delete</button>
         </td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = productMap.get(btn.dataset.id);
+        if (!p) return;
+        if (btn.dataset.action === 'edit') openEditModal(p);
+        else if (btn.dataset.action === 'stock') openRestock(p.id, p.name, p.stock);
+        else if (btn.dataset.action === 'delete') deleteProduct(p.id);
+      });
+    });
   }
 
   // Product modal
@@ -215,8 +231,21 @@
     document.getElementById('product-modal').removeAttribute('hidden');
   }
 
+  function closeProductModal() { document.getElementById('product-modal').setAttribute('hidden',''); }
+  function closeRestockModal() { document.getElementById('restock-modal').setAttribute('hidden',''); }
+
   ['close-modal','cancel-modal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => document.getElementById('product-modal').setAttribute('hidden',''));
+    document.getElementById(id).addEventListener('click', closeProductModal);
+  });
+
+  ['close-restock','cancel-restock'].forEach(id => {
+    document.getElementById(id).addEventListener('click', closeRestockModal);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('product-modal').hidden) closeProductModal();
+    if (!document.getElementById('restock-modal').hidden) closeRestockModal();
   });
 
   document.getElementById('product-form').addEventListener('submit', async (e) => {
@@ -234,7 +263,7 @@
     try {
       if (id) await apiFetch(`/products/${id}`, { method: 'PUT', body });
       else     await apiFetch('/products', { method: 'POST', body });
-      document.getElementById('product-modal').setAttribute('hidden','');
+      closeProductModal();
       loadProducts();
       toast(id ? 'Product updated' : 'Product added', 'success');
     } catch (err) { toast(err.message, 'error'); }
@@ -257,16 +286,12 @@
     document.getElementById('restock-modal').removeAttribute('hidden');
   }
 
-  ['close-restock','cancel-restock'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => document.getElementById('restock-modal').setAttribute('hidden',''));
-  });
-
   document.getElementById('save-restock').addEventListener('click', async () => {
     const id  = document.getElementById('restock-product-id').value;
     const qty = parseInt(document.getElementById('restock-qty').value);
     try {
       await apiFetch(`/products/${id}`, { method: 'PUT', body: { stock: qty } });
-      document.getElementById('restock-modal').setAttribute('hidden','');
+      closeRestockModal();
       loadProducts();
       toast('Stock updated', 'success');
     } catch (err) { toast(err.message, 'error'); }

@@ -19,6 +19,7 @@
 </head>
 <body>
 <div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -40,7 +41,10 @@
   </aside>
 
   <div class="main">
-    <div class="topbar"><span class="topbar__title">📊 Reports & Statistics</span></div>
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">📊 Reports & Statistics</span>
+    </div>
     <div class="content">
 
       <!-- Period Selector -->
@@ -158,8 +162,8 @@
   document.getElementById('apply-custom').addEventListener('click', () => {
     const from = document.getElementById('from-date').value;
     const to   = document.getElementById('to-date').value;
-    if (!from || !to) { showToast('Please select both dates', 'error'); return; }
-    if (from > to)    { showToast('From date must be before To date', 'error'); return; }
+    if (!from || !to) { toast('Please select both dates', 'error'); return; }
+    if (from > to)    { toast('From date must be before To date', 'error'); return; }
     loadStats();
   });
 
@@ -179,7 +183,7 @@
       apiFetch('/reports/summary').catch(() => null),
     ]);
 
-    if (!stats) { setLoading(false); showToast('Failed to load statistics', 'error'); return; }
+    if (!stats) { setLoading(false); toast('Failed to load statistics', 'error'); return; }
 
     renderSummary(stats.summary);
     renderTrend(stats.trend);

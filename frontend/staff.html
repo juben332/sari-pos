@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -29,7 +30,10 @@
   </aside>
 
   <div class="main">
-    <div class="topbar"><span class="topbar__title">Staff Management</span></div>
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">Staff Management</span>
+    </div>
     <div class="content">
       <div class="page-header">
         <h1 class="page-title">Staff Accounts</h1>
@@ -119,10 +123,16 @@
   requireAuth('admin');
   initSidebar('staff');
 
+  const staffMap = new Map();
+
   async function loadStaff() {
     const data = await apiFetch('/staff').catch(() => []);
     const tbody = document.getElementById('staff-tbody');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No staff found</td></tr>'; return; }
+
+    staffMap.clear();
+    data.forEach(s => staffMap.set(s.id, s));
+
     tbody.innerHTML = data.map(s => `
       <tr>
         <td><strong>${s.full_name}</strong></td>
@@ -130,12 +140,22 @@
         <td><span class="badge ${s.is_active ? 'badge--green' : 'badge--red'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
         <td>${new Date(s.created_at).toLocaleDateString()}</td>
         <td>
-          <button class="btn btn--outline btn--sm" onclick="openEdit(${JSON.stringify(s).replace(/"/g, '&quot;')})">Edit</button>
-          <button class="btn btn--outline btn--sm" onclick="openPwModal('${s.id}')">Password</button>
-          <button class="btn btn--${s.is_active ? 'danger' : 'success'} btn--sm" onclick="toggleActive('${s.id}', ${!s.is_active})">${s.is_active ? 'Deactivate' : 'Activate'}</button>
+          <button class="btn btn--outline btn--sm" data-action="edit" data-id="${s.id}">Edit</button>
+          <button class="btn btn--outline btn--sm" data-action="pw" data-id="${s.id}">Password</button>
+          <button class="btn btn--${s.is_active ? 'danger' : 'success'} btn--sm" data-action="toggle" data-id="${s.id}" data-active="${!s.is_active}">${s.is_active ? 'Deactivate' : 'Activate'}</button>
         </td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = staffMap.get(btn.dataset.id);
+        if (!s) return;
+        if (btn.dataset.action === 'edit') openEdit(s);
+        else if (btn.dataset.action === 'pw') openPwModal(s.id);
+        else if (btn.dataset.action === 'toggle') toggleActive(s.id, btn.dataset.active === 'true', s.full_name);
+      });
+    });
   }
 
   document.getElementById('add-staff-btn').addEventListener('click', () => {
@@ -158,8 +178,21 @@
     document.getElementById('staff-modal').removeAttribute('hidden');
   }
 
+  function closeStaffModal() { document.getElementById('staff-modal').setAttribute('hidden',''); }
+  function closePwModal() { document.getElementById('pw-modal').setAttribute('hidden',''); }
+
   ['close-modal','cancel-modal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => document.getElementById('staff-modal').setAttribute('hidden',''));
+    document.getElementById(id).addEventListener('click', closeStaffModal);
+  });
+
+  ['close-pw','cancel-pw'].forEach(id => {
+    document.getElementById(id).addEventListener('click', closePwModal);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('staff-modal').hidden) closeStaffModal();
+    if (!document.getElementById('pw-modal').hidden) closePwModal();
   });
 
   document.getElementById('staff-form').addEventListener('submit', async (e) => {
@@ -186,13 +219,15 @@
           },
         });
       }
-      document.getElementById('staff-modal').setAttribute('hidden','');
+      closeStaffModal();
       loadStaff();
       toast(id ? 'Staff updated' : 'Staff created', 'success');
     } catch (err) { toast(err.message, 'error'); }
   });
 
-  async function toggleActive(id, active) {
+  async function toggleActive(id, active, name) {
+    const action = active ? 'Activate' : 'Deactivate';
+    if (!confirm(`${action} ${name}?`)) return;
     try {
       await apiFetch(`/staff/${id}`, { method: 'PUT', body: { is_active: active } });
       loadStaff();
@@ -206,17 +241,13 @@
     document.getElementById('pw-modal').removeAttribute('hidden');
   }
 
-  ['close-pw','cancel-pw'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => document.getElementById('pw-modal').setAttribute('hidden',''));
-  });
-
   document.getElementById('save-pw').addEventListener('click', async () => {
     const id = document.getElementById('pw-staff-id').value;
     const pw = document.getElementById('new-password').value;
     if (pw.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
     try {
       await apiFetch(`/staff/${id}/password`, { method: 'PATCH', body: { password: pw } });
-      document.getElementById('pw-modal').setAttribute('hidden','');
+      closePwModal();
       toast('Password updated', 'success');
     } catch (err) { toast(err.message, 'error'); }
   });

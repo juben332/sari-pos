@@ -8,7 +8,7 @@
 </head>
 <body>
 <div class="layout">
-  <!-- Sidebar -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -31,6 +31,7 @@
 
   <div class="main">
     <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
       <span class="topbar__title">Point of Sale</span>
       <div class="topbar__spacer"></div>
       <span id="clock" style="font-size:0.85rem;color:#6b7280;"></span>
@@ -158,14 +159,22 @@
   function renderGrid(list) {
     const grid = document.getElementById('product-grid');
     if (!list.length) { grid.innerHTML = '<div class="empty-state">No products found</div>'; return; }
-    grid.innerHTML = list.map(p => `
-      <div class="product-card ${p.stock <= p.low_stock_threshold ? 'product-card--low' : ''}"
-           onclick="addToCart('${p.id}')">
-        <div class="product-card__name">${p.name}</div>
-        <div class="product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
-        <div class="product-card__stock">Stock: ${p.stock}</div>
-      </div>
-    `).join('');
+    grid.innerHTML = list.map(p => {
+      const outOfStock = p.stock === 0;
+      const lowStock = !outOfStock && p.stock <= p.low_stock_threshold;
+      const cls = outOfStock ? 'product-card--out' : lowStock ? 'product-card--low' : '';
+      return `
+        <div class="product-card ${cls}" data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
+          <div class="product-card__name">${p.name}</div>
+          <div class="product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
+          <div class="product-card__stock">${outOfStock ? 'Out of stock' : `Stock: ${p.stock}`}</div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.product-card:not(.product-card--out)').forEach(card => {
+      card.addEventListener('click', () => addToCart(card.dataset.productId));
+    });
   }
 
   function addToCart(productId) {
@@ -191,14 +200,23 @@
         <div class="cart-item">
           <div class="cart-item__name">${item.name}</div>
           <div class="cart-item__qty">
-            <button onclick="changeQty(${i}, -1)">−</button>
+            <button data-action="dec" data-index="${i}">−</button>
             <span>${item.quantity}</span>
-            <button onclick="changeQty(${i}, 1)">+</button>
+            <button data-action="inc" data-index="${i}">+</button>
           </div>
           <div class="cart-item__price">₱${(item.price * item.quantity).toFixed(2)}</div>
-          <button class="cart-item__remove" onclick="removeItem(${i})">✕</button>
+          <button class="cart-item__remove" data-action="remove" data-index="${i}">✕</button>
         </div>
       `).join('');
+
+      list.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = parseInt(btn.dataset.index);
+          if (btn.dataset.action === 'dec') changeQty(i, -1);
+          else if (btn.dataset.action === 'inc') changeQty(i, 1);
+          else removeItem(i);
+        });
+      });
     }
     updateTotals();
   }
@@ -242,11 +260,17 @@
 
   document.getElementById('discount-type').addEventListener('change', updateTotals);
   document.getElementById('cash-tendered').addEventListener('input', updateTotals);
-  document.getElementById('clear-btn').addEventListener('click', () => { cart = []; renderCart(); });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (cart.length === 0) return;
+    if (!confirm('Clear all items from the cart?')) return;
+    cart = [];
+    renderCart();
+  });
 
   document.getElementById('process-btn').addEventListener('click', async () => {
     const btn = document.getElementById('process-btn');
     btn.disabled = true;
+    btn.textContent = 'Processing...';
     try {
       const data = await apiFetch('/transactions', {
         method: 'POST',
@@ -266,6 +290,7 @@
     } catch (err) {
       toast(err.message, 'error');
       btn.disabled = false;
+      btn.textContent = 'Process Sale';
     }
   });
 
@@ -293,8 +318,13 @@
     document.getElementById('receipt-modal').removeAttribute('hidden');
   }
 
-  document.getElementById('close-receipt').addEventListener('click', () => {
+  function closeReceipt() {
     document.getElementById('receipt-modal').setAttribute('hidden', '');
+  }
+
+  document.getElementById('close-receipt').addEventListener('click', closeReceipt);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeReceipt();
   });
 
   // Barcode search (enter key)

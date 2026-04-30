@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
@@ -29,7 +30,10 @@
   </aside>
 
   <div class="main">
-    <div class="topbar"><span class="topbar__title">Transactions</span></div>
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">Transactions</span>
+    </div>
     <div class="content">
       <div class="page-header">
         <h1 class="page-title">Transaction History</h1>
@@ -90,7 +94,11 @@
     const res = await apiFetch(`/transactions?${params}`).catch(() => ({ data: [], total: 0 }));
     const tbody = document.getElementById('txn-tbody');
 
-    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No transactions found</td></tr>'; return; }
+    if (!res.data.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No transactions found</td></tr>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
 
     tbody.innerHTML = res.data.map(t => `
       <tr>
@@ -103,21 +111,47 @@
         <td>₱${parseFloat(t.cash_tendered).toFixed(2)}</td>
         <td>₱${parseFloat(t.change_due).toFixed(2)}</td>
         <td><span class="badge ${t.status === 'completed' ? 'badge--green' : 'badge--red'}">${t.status}</span></td>
-        <td><button class="btn btn--outline btn--sm" onclick="openDetail('${t.id}')">View</button></td>
+        <td><button class="btn btn--outline btn--sm" data-txn-id="${t.id}">View</button></td>
       </tr>
     `).join('');
 
-    // Pagination
-    const totalPages = Math.ceil(res.total / 30);
+    tbody.querySelectorAll('button[data-txn-id]').forEach(btn => {
+      btn.addEventListener('click', () => openDetail(btn.dataset.txnId));
+    });
+
+    renderPagination(Math.ceil(res.total / 30));
+  }
+
+  function renderPagination(totalPages) {
     const pg = document.getElementById('pagination');
     pg.innerHTML = '';
-    for (let i = 1; i <= totalPages; i++) {
+    if (totalPages <= 1) return;
+
+    const pages = buildPageList(page, totalPages);
+    pages.forEach(p => {
       const btn = document.createElement('button');
-      btn.className = `page-btn ${i === page ? 'active' : ''}`;
-      btn.textContent = i;
-      btn.onclick = () => { page = i; load(); };
+      if (p === '...') {
+        btn.className = 'page-btn page-btn--dots';
+        btn.textContent = '…';
+        btn.disabled = true;
+      } else {
+        btn.className = `page-btn ${p === page ? 'active' : ''}`;
+        btn.textContent = p;
+        btn.addEventListener('click', () => { page = p; load(); });
+      }
       pg.appendChild(btn);
-    }
+    });
+  }
+
+  function buildPageList(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
   }
 
   async function openDetail(id) {
@@ -152,18 +186,24 @@
     document.getElementById('detail-modal').removeAttribute('hidden');
   }
 
+  function closeDetail() { document.getElementById('detail-modal').setAttribute('hidden', ''); }
+
   document.getElementById('void-btn').addEventListener('click', async () => {
     if (!confirm('Void this transaction? Stock will be restored.')) return;
     try {
       await apiFetch(`/transactions/${currentTxnId}/void`, { method: 'PATCH' });
-      document.getElementById('detail-modal').setAttribute('hidden', '');
+      closeDetail();
       load();
       toast('Transaction voided', 'success');
     } catch (err) { toast(err.message, 'error'); }
   });
 
   ['close-detail','close-detail2'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () => document.getElementById('detail-modal').setAttribute('hidden',''));
+    document.getElementById(id).addEventListener('click', closeDetail);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('detail-modal').hidden) closeDetail();
   });
 
   document.getElementById('filter-btn').addEventListener('click', () => { page = 1; load(); });
