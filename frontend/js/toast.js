@@ -1,4 +1,4 @@
-function toast(message, type = 'info', duration = 3000) {
+function toast(message, type = 'info', duration = 3500) {
   let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
@@ -7,7 +7,14 @@ function toast(message, type = 'info', duration = 3000) {
   }
   const el = document.createElement('div');
   el.className = `toast toast--${type}`;
-  el.textContent = message;
+
+  const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+  el.innerHTML = `<span style="font-size:1rem;opacity:0.9;">${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+
   container.appendChild(el);
-  setTimeout(() => el.remove(), duration);
+
+  setTimeout(() => {
+    el.style.animation = 'toastSlideOut 0.25s ease forwards';
+    setTimeout(() => el.remove(), 250);
+  }, duration);
 }
