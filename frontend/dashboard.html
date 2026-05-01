@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .activity-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 0; border-bottom: 1px solid var(--gray-100);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .activity-icon--sale    { background: var(--green-light); }
+    .activity-icon--void    { background: var(--red-light); }
+    .activity-icon--return  { background: var(--amber-light); }
+    .activity-meta { flex: 1; min-width: 0; }
+    .activity-meta strong { font-size: 0.875rem; font-weight: 600; display: block; color: var(--gray-800); }
+    .activity-meta span   { font-size: 0.78rem; color: var(--gray-400); }
+    .activity-amount { font-weight: 800; font-size: 0.9rem; color: var(--green); white-space: nowrap; }
+    .activity-amount--void { color: var(--red); }
+    .stock-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .stock-bar-bg { flex: 1; height: 6px; background: var(--gray-100); border-radius: 3px; overflow: hidden; }
+    .stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .quick-link {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 20px 16px; background: #fff; border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-lg); cursor: pointer; text-decoration: none;
+      transition: all 0.15s; box-shadow: var(--shadow-xs);
+    }
+    .quick-link:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(79,70,229,0.15); transform: translateY(-2px); }
+    .quick-link__icon { font-size: 1.8rem; line-height: 1; }
+    .quick-link__label { font-size: 0.82rem; font-weight: 600; color: var(--gray-700); text-align: center; }
+    .quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/dashboard.html" class="sidebar__link" data-page="dashboard"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/pos.html"          class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html"      class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html"       class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/categories.html"      class="sidebar__link" data-page="categories"><span class="icon">🏷️</span> Categories</a>
+        <a href="/stock-movements.html" class="sidebar__link" data-page="stock-movements"><span class="icon">📈</span> Stock History</a>
+        <a href="/reports.html"         class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html"           class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">Dashboard</span>
+      <div class="topbar__spacer"></div>
+      <span id="clock" style="font-size:0.82rem;color:var(--gray-400);font-weight:500;"></span>
+    </div>
+
+    <div class="content">
+
+      <!-- Today's summary cards -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-card__label">Today's Sales</div><div class="stat-card__value green" id="s-sales">—</div><div class="stat-card__sub" id="s-sales-sub"></div></div>
+        <div class="stat-card"><div class="stat-card__label">Transactions</div><div class="stat-card__value blue" id="s-txn">—</div><div class="stat-card__sub">today</div></div>
+        <div class="stat-card"><div class="stat-card__label">Refunds</div><div class="stat-card__value red" id="s-refunds">—</div><div class="stat-card__sub">today</div></div>
+        <div class="stat-card"><div class="stat-card__label">Total Products</div><div class="stat-card__value purple" id="s-products">—</div><div class="stat-card__sub">active</div></div>
+        <div class="stat-card"><div class="stat-card__label">Low Stock</div><div class="stat-card__value amber" id="s-low">—</div><div class="stat-card__sub" id="s-low-sub"></div></div>
+        <div class="stat-card"><div class="stat-card__label">Net Revenue</div><div class="stat-card__value green" id="s-net">—</div><div class="stat-card__sub">today</div></div>
+      </div>
+
+      <!-- Quick links -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:14px;">Quick Actions</div>
+        <div class="quick-links">
+          <a href="/pos.html" class="quick-link"><span class="quick-link__icon">🏪</span><span class="quick-link__label">New Sale</span></a>
+          <a href="/returns.html" class="quick-link"><span class="quick-link__icon">↩️</span><span class="quick-link__label">Process Return</span></a>
+          <a href="/inventory.html" class="quick-link" data-admin-link hidden><span class="quick-link__icon">📦</span><span class="quick-link__label">Inventory</span></a>
+          <a href="/categories.html" class="quick-link" data-admin-link hidden><span class="quick-link__icon">🏷️</span><span class="quick-link__label">Categories</span></a>
+          <a href="/reports.html" class="quick-link" data-admin-link hidden><span class="quick-link__icon">📊</span><span class="quick-link__label">Reports</span></a>
+          <a href="/staff.html" class="quick-link" data-admin-link hidden><span class="quick-link__icon">👥</span><span class="quick-link__label">Staff</span></a>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Recent transactions -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-weight:700;font-size:0.95rem;">Recent Transactions</div>
+            <a href="/transactions.html" style="font-size:0.8rem;color:var(--primary);font-weight:600;text-decoration:none;">View all →</a>
+          </div>
+          <div id="recent-txns"><div class="empty-state" style="padding:24px;">Loading...</div></div>
+        </div>
+
+        <!-- Low stock -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-weight:700;font-size:0.95rem;">⚠️ Low Stock Alert</div>
+            <a href="/inventory.html" style="font-size:0.8rem;color:var(--primary);font-weight:600;text-decoration:none;" data-admin-link hidden>Manage →</a>
+          </div>
+          <div id="low-stock-list"><div class="empty-state" style="padding:24px;">Loading...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  const user = requireAuth();
+  initSidebar('dashboard');
+
+  // Clock
+  const clockEl = document.getElementById('clock');
+  function tick() { clockEl.textContent = new Date().toLocaleString('en-PH', { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }); }
+  tick(); setInterval(tick, 60000);
+
+  // Show admin quick links
+  if (user.role === 'admin') {
+    document.querySelectorAll('[data-admin-link]').forEach(el => el.removeAttribute('hidden'));
+  }
+
+  const fmt = n => `₱${parseFloat(n||0).toLocaleString('en-PH', { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
+
+  async function loadDashboard() {
+    const [summary, recentRes] = await Promise.all([
+      apiFetch('/reports/summary').catch(() => null),
+      apiFetch('/transactions?limit=8').catch(() => ({ data: [] })),
+    ]);
+
+    if (summary) {
+      document.getElementById('s-sales').textContent    = fmt(summary.today_sales);
+      document.getElementById('s-txn').textContent      = summary.today_transactions;
+      document.getElementById('s-refunds').textContent  = fmt(summary.today_refunds);
+      document.getElementById('s-products').textContent = summary.total_products;
+      document.getElementById('s-low').textContent      = summary.low_stock_count;
+      document.getElementById('s-low-sub').textContent  = summary.low_stock_count > 0 ? 'need restocking' : 'all good ✅';
+      const net = summary.today_sales - summary.today_refunds;
+      document.getElementById('s-net').textContent = fmt(net);
+
+      renderLowStock(summary.low_stock_items || []);
+    }
+
+    renderRecentTxns(recentRes.data || []);
+  }
+
+  function renderRecentTxns(txns) {
+    const el = document.getElementById('recent-txns');
+    if (!txns.length) { el.innerHTML = '<div class="empty-state" style="padding:24px 0;">No transactions today</div>'; return; }
+    el.innerHTML = txns.map(t => {
+      const isVoid = t.status === 'voided';
+      return `<div class="activity-item">
+        <div class="activity-icon activity-icon--${isVoid ? 'void' : 'sale'}">${isVoid ? '✕' : '✓'}</div>
+        <div class="activity-meta">
+          <strong>${t.reference_no}</strong>
+          <span>${t.profiles?.full_name || 'Cashier'} · ${new Date(t.created_at).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}</span>
+        </div>
+        <div class="activity-amount ${isVoid ? 'activity-amount--void' : ''}">
+          ${isVoid ? '—' : fmt(t.total)}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderLowStock(items) {
+    const el = document.getElementById('low-stock-list');
+    if (!items.length) { el.innerHTML = '<div class="empty-state" style="padding:24px 0;">All products well stocked ✅</div>'; return; }
+    el.innerHTML = items.slice(0, 8).map(p => {
+      const pct = p.low_stock_threshold > 0 ? Math.min(100, Math.round((p.stock / p.low_stock_threshold) * 100)) : 0;
+      const color = p.stock === 0 ? 'var(--red)' : 'var(--amber)';
+      return `<div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:0.83rem;font-weight:600;color:var(--gray-800);">${p.name}</span>
+          <span style="font-size:0.78rem;font-weight:700;color:${color};">${p.stock} / ${p.low_stock_threshold}</span>
+        </div>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar-bg"><div class="stock-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

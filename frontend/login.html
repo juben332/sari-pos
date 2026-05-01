@@ -29,7 +29,7 @@
 </div>
 <script src="/js/api.js"></script>
 <script>
-  if (getUser() && getToken()) window.location.href = '/pos.html';
+  if (getUser() && getToken()) window.location.href = '/dashboard.html';
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -45,7 +45,7 @@
         body: { email: document.getElementById('email').value, password: document.getElementById('password').value },
       });
       setSession(data.access_token, data.refresh_token, data.user);
-      window.location.href = '/pos.html';
+      window.location.href = '/dashboard.html';
     } catch (err) {
       errEl.textContent = err.message || 'Invalid email or password';
       errEl.style.display = 'block';

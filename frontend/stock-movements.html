@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock History — Sari POS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar__brand">🛒 Sari POS</div>
+    <nav class="sidebar__nav">
+      <a href="/dashboard.html"    class="sidebar__link" data-page="dashboard"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/pos.html"          class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html"      class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <div data-admin hidden>
+        <div class="sidebar__divider">Admin</div>
+        <a href="/inventory.html"       class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/categories.html"      class="sidebar__link" data-page="categories"><span class="icon">🏷️</span> Categories</a>
+        <a href="/stock-movements.html" class="sidebar__link" data-page="stock-movements"><span class="icon">📈</span> Stock History</a>
+        <a href="/reports.html"         class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html"           class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+      </div>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__user" data-user-name></div>
+      <div data-user-role style="font-size:0.75rem;"></div>
+      <button id="logout-btn" class="btn btn--outline btn--sm" style="margin-top:10px;width:100%;">Logout</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <span class="topbar__title">Stock History</span>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <h1 class="page-title">Stock Movements</h1>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="search-bar" style="margin-bottom:0;">
+          <select id="type-filter" class="form-control" style="max-width:160px;">
+            <option value="">All Types</option>
+            <option value="sale">Sale</option>
+            <option value="return">Return</option>
+            <option value="adjustment">Adjustment</option>
+            <option value="restock">Restock</option>
+          </select>
+          <input type="date" id="from-date" class="form-control" style="max-width:155px;" />
+          <input type="date" id="to-date"   class="form-control" style="max-width:155px;" />
+          <button class="btn btn--outline" id="filter-btn">Filter</button>
+          <button class="btn btn--outline" id="reset-btn">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Change</th>
+                <th>Before</th>
+                <th>After</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="movements-tbody">
+              <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/toast.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+  requireAuth('admin');
+  initSidebar('stock-movements');
+
+  let page = 1;
+
+  const typeLabels = { sale: 'Sale', return: 'Return', adjustment: 'Adjustment', restock: 'Restock' };
+  const typeBadge  = { sale: 'badge--red', return: 'badge--green', adjustment: 'badge--blue', restock: 'badge--purple' };
+
+  async function load() {
+    const type = document.getElementById('type-filter').value;
+    const from = document.getElementById('from-date').value;
+    const to   = document.getElementById('to-date').value;
+
+    const params = new URLSearchParams({ page, limit: 50 });
+    if (type) params.set('type', type);
+    if (from) params.set('from', from + 'T00:00:00');
+    if (to)   params.set('to',   to   + 'T23:59:59');
+
+    const res = await apiFetch(`/reports/stock-movements?${params}`).catch(() => ({ data: [], total: 0 }));
+    const tbody = document.getElementById('movements-tbody');
+
+    if (!res.data?.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No stock movements found</td></tr>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    tbody.innerHTML = res.data.map(m => {
+      const isNeg = m.quantity_change < 0;
+      const changeStr = isNeg
+        ? `<span style="color:var(--red);font-weight:700;">${m.quantity_change}</span>`
+        : `<span style="color:var(--green);font-weight:700;">+${m.quantity_change}</span>`;
+
+      return `<tr>
+        <td style="white-space:nowrap;color:var(--gray-500);font-size:0.82rem;">${new Date(m.created_at).toLocaleString('en-PH', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+        <td><strong>${m.products?.name || '—'}</strong></td>
+        <td><span class="badge ${typeBadge[m.type] || 'badge--gray'}">${typeLabels[m.type] || m.type}</span></td>
+        <td>${changeStr}</td>
+        <td style="color:var(--gray-500);">${m.stock_before}</td>
+        <td style="font-weight:600;">${m.stock_after}</td>
+        <td style="color:var(--gray-400);font-size:0.82rem;">${m.note || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    renderPagination(Math.ceil(res.total / 50));
+  }
+
+  function renderPagination(totalPages) {
+    const pg = document.getElementById('pagination');
+    pg.innerHTML = '';
+    if (totalPages <= 1) return;
+    const pages = buildPageList(page, totalPages);
+    pages.forEach(p => {
+      const btn = document.createElement('button');
+      if (p === '...') {
+        btn.className = 'page-btn page-btn--dots'; btn.textContent = '…'; btn.disabled = true;
+      } else {
+        btn.className = `page-btn ${p === page ? 'active' : ''}`;
+        btn.textContent = p;
+        btn.addEventListener('click', () => { page = p; load(); });
+      }
+      pg.appendChild(btn);
+    });
+  }
+
+  function buildPageList(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [1];
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  document.getElementById('filter-btn').addEventListener('click', () => { page = 1; load(); });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    document.getElementById('type-filter').value = '';
+    document.getElementById('from-date').value = '';
+    document.getElementById('to-date').value = '';
+    page = 1; load();
+  });
+
+  load();
+</script>
+</body>
+</html>

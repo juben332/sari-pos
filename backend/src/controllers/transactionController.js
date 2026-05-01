@@ -104,7 +104,7 @@ const create = async (req, res) => {
 };
 
 const list = async (req, res) => {
-  const { from, to, cashier_id, page = 1, limit = 50 } = req.query;
+  const { from, to, cashier_id, reference_no, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
 
   let query = adminClient
@@ -116,6 +116,7 @@ const list = async (req, res) => {
   if (from) query = query.gte('created_at', from);
   if (to) query = query.lte('created_at', to);
   if (cashier_id) query = query.eq('cashier_id', cashier_id);
+  if (reference_no) query = query.ilike('reference_no', `%${reference_no}%`);
 
   const { data, error, count } = await query;
   if (error) return res.status(500).json({ error: error.message });

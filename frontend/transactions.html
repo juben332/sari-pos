@@ -12,14 +12,17 @@
   <aside class="sidebar">
     <div class="sidebar__brand">🛒 Sari POS</div>
     <nav class="sidebar__nav">
-      <a href="/pos.html" class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
-      <a href="/returns.html" class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
+      <a href="/dashboard.html"    class="sidebar__link" data-page="dashboard"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/pos.html"          class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
+      <a href="/returns.html"      class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
       <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
       <div data-admin hidden>
         <div class="sidebar__divider">Admin</div>
-        <a href="/inventory.html" class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
-        <a href="/reports.html" class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
-        <a href="/staff.html" class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+        <a href="/inventory.html"       class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
+        <a href="/categories.html"      class="sidebar__link" data-page="categories"><span class="icon">🏷️</span> Categories</a>
+        <a href="/stock-movements.html" class="sidebar__link" data-page="stock-movements"><span class="icon">📈</span> Stock History</a>
+        <a href="/reports.html"         class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
+        <a href="/staff.html"           class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
       </div>
     </nav>
     <div class="sidebar__footer">
@@ -39,8 +42,9 @@
         <h1 class="page-title">Transaction History</h1>
       </div>
       <div class="search-bar">
-        <input type="date" id="from-date" class="form-control" style="max-width:160px;" />
-        <input type="date" id="to-date" class="form-control" style="max-width:160px;" />
+        <input type="text" id="ref-search" class="form-control" placeholder="Search ref # e.g. TXN-..." style="max-width:210px;" />
+        <input type="date" id="from-date" class="form-control" style="max-width:155px;" />
+        <input type="date" id="to-date" class="form-control" style="max-width:155px;" />
         <button class="btn btn--outline" id="filter-btn">Filter</button>
         <button class="btn btn--outline" id="reset-btn">Reset</button>
       </div>
@@ -85,11 +89,13 @@
   let currentTxnId = null;
 
   async function load() {
-    const from = document.getElementById('from-date').value;
-    const to   = document.getElementById('to-date').value;
+    const from   = document.getElementById('from-date').value;
+    const to     = document.getElementById('to-date').value;
+    const refNo  = document.getElementById('ref-search').value.trim();
     const params = new URLSearchParams({ page, limit: 30 });
-    if (from) params.set('from', from + 'T00:00:00');
-    if (to)   params.set('to', to + 'T23:59:59');
+    if (from)  params.set('from', from + 'T00:00:00');
+    if (to)    params.set('to', to + 'T23:59:59');
+    if (refNo) params.set('reference_no', refNo);
 
     const res = await apiFetch(`/transactions?${params}`).catch(() => ({ data: [], total: 0 }));
     const tbody = document.getElementById('txn-tbody');
@@ -208,9 +214,15 @@
 
   document.getElementById('filter-btn').addEventListener('click', () => { page = 1; load(); });
   document.getElementById('reset-btn').addEventListener('click', () => {
+    document.getElementById('ref-search').value = '';
     document.getElementById('from-date').value = '';
     document.getElementById('to-date').value = '';
     page = 1; load();
+  });
+
+  // Search on Enter key
+  document.getElementById('ref-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { page = 1; load(); }
   });
 
   load();
