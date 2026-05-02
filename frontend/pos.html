@@ -40,64 +40,84 @@
       <span id="clock" style="font-size:0.82rem;color:var(--gray-400);font-weight:500;"></span>
     </div>
 
-    <!-- Mobile tab bar -->
-    <div class="pos-tabs" id="pos-tabs">
-      <button class="pos-tab active" id="tab-products">Products</button>
-      <button class="pos-tab" id="tab-cart">Cart <span class="pos-tab__badge" id="cart-badge" hidden>0</span></button>
-    </div>
-
-    <div class="pos-page">
+    <div class="pos-layout">
       <!-- LEFT: Products -->
-      <div class="pos-left" id="pos-left">
-        <div class="pos-search">
+      <div class="pos-left">
+        <div class="pos-search-bar">
           <input type="text" id="search" class="form-control" placeholder="Search or scan barcode..." />
+          <div class="pos-category-tabs" id="cat-pills">
+            <button class="pos-cat-tab pos-cat-tab--active" data-cat="">All</button>
+          </div>
         </div>
-        <div class="pos-cat-pills" id="cat-pills">
-          <button class="cat-pill active" data-cat="">All</button>
-        </div>
-        <div class="product-grid" id="product-grid">
-          <div class="empty-state">Loading products...</div>
+        <div class="pos-product-grid" id="product-grid">
+          <div class="pos-empty">Loading products...</div>
         </div>
       </div>
 
-      <!-- RIGHT: Cart -->
-      <div class="pos-right" id="pos-right">
-        <div class="pos-cart-header">
-          <span class="pos-cart-title">Current Order</span>
-          <button class="btn btn--outline btn--sm" id="clear-btn">Clear</button>
-        </div>
+      <!-- Cart overlay (mobile) -->
+      <div class="pos-cart-overlay" id="cart-overlay"></div>
 
-        <div class="pos-cart-items" id="cart-list">
-          <div class="cart-empty">Cart is empty</div>
-        </div>
+      <!-- FAB (mobile only) -->
+      <button class="pos-cart-fab" id="cart-fab" aria-label="View cart">
+        <span class="pos-cart-fab__label">
+          <i data-lucide="shopping-cart" style="width:18px;height:18px;"></i>
+          View Cart <span class="pos-cart-fab__count" id="fab-count">0 items</span>
+        </span>
+        <span class="pos-cart-fab__total" id="fab-total">₱0.00</span>
+      </button>
 
-        <div class="pos-cart-totals">
-          <div class="pos-totals-row">
-            <span>Subtotal</span>
-            <span id="subtotal">₱0.00</span>
+      <!-- RIGHT: Cart + Payment -->
+      <div class="pos-right" id="cart-panel">
+        <div class="pos-cart">
+          <div class="pos-cart__handle" id="cart-handle">
+            <div class="pos-cart__handle-bar"></div>
           </div>
-          <div class="pos-totals-row pos-totals-total">
-            <span>TOTAL</span>
-            <span id="total">₱0.00</span>
+          <div class="pos-cart__header">
+            <h3>Current Order</h3>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="btn btn--outline btn--sm" id="clear-btn">Clear</button>
+              <button class="pos-cart__close-btn" id="close-cart-btn" aria-label="Close cart">✕</button>
+            </div>
           </div>
-        </div>
 
-        <div class="pos-payment">
-          <label class="pos-payment-label">Amount Tendered</label>
-          <input type="number" id="cash-tendered" class="form-control" min="0" step="0.01" placeholder="0.00" />
-          <div class="quick-cash">
-            <button class="quick-cash-btn" data-amount="100">₱100</button>
-            <button class="quick-cash-btn" data-amount="200">₱200</button>
-            <button class="quick-cash-btn" data-amount="500">₱500</button>
-            <button class="quick-cash-btn" data-amount="1000">₱1000</button>
+          <div class="pos-cart__items" id="cart-list">
+            <div class="pos-cart__empty">
+              <i data-lucide="shopping-cart" style="width:36px;height:36px;stroke-width:1.5;"></i>
+              Tap a product to add it
+            </div>
           </div>
-          <div class="pos-totals-row" style="margin-bottom:14px;">
-            <span>Change</span>
-            <span id="change-due" style="color:var(--green);font-weight:700;">₱0.00</span>
+
+          <div class="pos-cart__totals">
+            <div class="pos-totals-row">
+              <span>Subtotal</span>
+              <span id="subtotal">₱0.00</span>
+            </div>
+            <div class="pos-totals-row pos-totals-row--total">
+              <span>TOTAL</span>
+              <span id="total">₱0.00</span>
+            </div>
           </div>
-          <button class="btn btn--primary btn--lg" id="process-btn" style="width:100%;" disabled>
-            Process Payment
-          </button>
+
+          <div class="pos-payment">
+            <label class="form-label">Amount Tendered</label>
+            <input type="number" id="cash-tendered" class="form-control" min="0" step="0.01" placeholder="0.00" />
+            <div class="pos-quick-cash">
+              <button class="btn btn--outline btn--sm pos-quick-btn" data-amount="100">₱100</button>
+              <button class="btn btn--outline btn--sm pos-quick-btn" data-amount="200">₱200</button>
+              <button class="btn btn--outline btn--sm pos-quick-btn" data-amount="500">₱500</button>
+              <button class="btn btn--outline btn--sm pos-quick-btn" data-amount="1000">₱1000</button>
+            </div>
+            <div class="pos-totals-row">
+              <span>Change</span>
+              <span id="change-due" class="pos-change">₱0.00</span>
+            </div>
+          </div>
+
+          <div style="padding:0 14px 16px;">
+            <button class="btn btn--primary btn--lg" id="process-btn" style="width:100%;" disabled>
+              Process Payment
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -135,13 +155,13 @@
     document.getElementById('clock').textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }, 1000);
 
-  // Load categories → render pills
+  // ── Categories ─────────────────────────────────────────────────────────────
   async function loadCategories() {
     const cats = await apiFetch('/categories').catch(() => []);
     const pills = document.getElementById('cat-pills');
     cats.forEach(c => {
       const btn = document.createElement('button');
-      btn.className = 'cat-pill';
+      btn.className = 'pos-cat-tab';
       btn.dataset.cat = c.id;
       btn.textContent = c.name;
       btn.addEventListener('click', () => selectCat(c.id, btn));
@@ -151,22 +171,21 @@
 
   function selectCat(id, btn) {
     activeCatId = id;
-    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('.pos-cat-tab').forEach(p => p.classList.remove('pos-cat-tab--active'));
+    btn.classList.add('pos-cat-tab--active');
     loadProducts();
   }
 
-  document.querySelector('.cat-pill[data-cat=""]').addEventListener('click', function() {
+  document.querySelector('.pos-cat-tab[data-cat=""]').addEventListener('click', function() {
     selectCat('', this);
   });
 
-  // Load products
+  // ── Products ───────────────────────────────────────────────────────────────
   async function loadProducts() {
     const search = document.getElementById('search').value.trim();
     const params = new URLSearchParams();
-    if (search)       params.set('search', search);
-    if (activeCatId)  params.set('category_id', activeCatId);
-
+    if (search)      params.set('search', search);
+    if (activeCatId) params.set('category_id', activeCatId);
     const data = await apiFetch(`/products?${params}`).catch(() => []);
     products = data;
     renderGrid(data);
@@ -174,30 +193,54 @@
 
   function renderGrid(list) {
     const grid = document.getElementById('product-grid');
-    if (!list.length) { grid.innerHTML = '<div class="empty-state">No products found</div>'; return; }
+    if (!list.length) { grid.innerHTML = '<div class="pos-empty">No products found</div>'; return; }
     grid.innerHTML = list.map(p => {
       const outOfStock = p.stock === 0;
-      const lowStock   = !outOfStock && p.stock <= p.low_stock_threshold;
+      const isLow      = !outOfStock && p.stock <= p.low_stock_threshold;
       const cartItem   = cart.find(i => i.product_id === p.id);
       const inCart     = !!cartItem;
-      let cls = outOfStock ? 'product-card--out' : lowStock ? 'product-card--low' : '';
-      if (inCart) cls += ' product-card--in-cart';
       return `
-        <div class="product-card ${cls}" data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
-          ${inCart ? `<span class="product-card__badge">${cartItem.quantity}</span>` : ''}
-          <div class="product-card__name">${p.name}</div>
-          ${p.categories?.name ? `<div class="product-card__cat">${p.categories.name}</div>` : ''}
-          <div class="product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
-          <div class="product-card__stock">${outOfStock ? 'Out of stock' : `${p.stock} left`}</div>
+        <div class="pos-product-card ${inCart ? 'pos-product-card--in-cart' : ''} ${outOfStock ? 'pos-product-card--out' : ''}"
+             data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
+          <div class="pos-product-card__header">
+            <div class="pos-product-card__name">${p.name}</div>
+            ${inCart ? `<div class="pos-product-card__badge">${cartItem.quantity}</div>` : ''}
+          </div>
+          ${p.categories?.name ? `<div class="pos-product-card__cat">${p.categories.name}</div>` : ''}
+          <div class="pos-product-card__footer">
+            <div class="pos-product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
+            <div class="pos-product-card__stock ${isLow ? 'low' : ''}">${outOfStock ? 'Out of stock' : `${p.stock} left`}</div>
+          </div>
         </div>
       `;
     }).join('');
 
-    grid.querySelectorAll('.product-card:not(.product-card--out)').forEach(card => {
+    grid.querySelectorAll('.pos-product-card:not(.pos-product-card--out)').forEach(card => {
       card.addEventListener('click', () => addToCart(card.dataset.productId));
     });
   }
 
+  function updateCardStates() {
+    document.querySelectorAll('.pos-product-card[data-product-id]').forEach(card => {
+      const cartItem = cart.find(x => x.product_id === card.dataset.productId);
+      const inCart = !!cartItem;
+      card.classList.toggle('pos-product-card--in-cart', inCart);
+      const header = card.querySelector('.pos-product-card__header');
+      let badge = card.querySelector('.pos-product-card__badge');
+      if (inCart) {
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.className = 'pos-product-card__badge';
+          header.appendChild(badge);
+        }
+        badge.textContent = cartItem.quantity;
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
+
+  // ── Cart ───────────────────────────────────────────────────────────────────
   function addToCart(productId) {
     const p = products.find(x => x.id === productId);
     if (!p) return;
@@ -210,35 +253,35 @@
       cart.push({ product_id: p.id, name: p.name, price: parseFloat(p.price), quantity: 1, stock: p.stock });
     }
     renderCart();
-  }
-
-  function updateCartBadge() {
-    const count = cart.reduce((s, i) => s + i.quantity, 0);
-    const badge = document.getElementById('cart-badge');
-    if (count > 0) { badge.textContent = count; badge.removeAttribute('hidden'); }
-    else badge.setAttribute('hidden', '');
+    updateCardStates();
   }
 
   function renderCart() {
     const list = document.getElementById('cart-list');
     if (!cart.length) {
-      list.innerHTML = '<div class="cart-empty">Cart is empty</div>';
+      list.innerHTML = `
+        <div class="pos-cart__empty">
+          <i data-lucide="shopping-cart" style="width:36px;height:36px;stroke-width:1.5;"></i>
+          Tap a product to add it
+        </div>`;
+      lucide.createIcons();
     } else {
       list.innerHTML = cart.map((item, i) => `
-        <div class="cart-item">
-          <div class="cart-item__info">
-            <div class="cart-item__name">${item.name}</div>
-            <div class="cart-item__unit">₱${item.price.toFixed(2)} each</div>
+        <div class="pos-cart-item">
+          <div class="pos-cart-item__name">${item.name}</div>
+          <div class="pos-cart-item__subtotal">₱${(item.price * item.quantity).toFixed(2)}</div>
+          <div class="pos-cart-item__row2">
+            <span class="pos-cart-item__unit">₱${item.price.toFixed(2)} each</span>
+            <button class="qty-btn qty-btn--remove" data-action="dec" data-index="${i}">−</button>
+            <span class="qty-value">${item.quantity}</span>
+            <button class="qty-btn" data-action="inc" data-index="${i}">+</button>
+            <button class="remove-btn" data-action="remove" data-index="${i}" title="Remove">
+              <i data-lucide="x" style="width:14px;height:14px;stroke-width:2.5;pointer-events:none;"></i>
+            </button>
           </div>
-          <div class="cart-item__qty">
-            <button data-action="dec" data-index="${i}">−</button>
-            <span>${item.quantity}</span>
-            <button data-action="inc" data-index="${i}">+</button>
-          </div>
-          <div class="cart-item__price">₱${(item.price * item.quantity).toFixed(2)}</div>
-          <button class="cart-item__remove" data-action="remove" data-index="${i}">✕</button>
         </div>
       `).join('');
+      lucide.createIcons();
 
       list.querySelectorAll('button[data-action]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -250,8 +293,6 @@
       });
     }
     updateTotals();
-    updateCartBadge();
-    renderGrid(products);
   }
 
   function changeQty(i, delta) {
@@ -259,23 +300,28 @@
     if (cart[i].quantity <= 0) cart.splice(i, 1);
     else if (cart[i].quantity > cart[i].stock) { cart[i].quantity = cart[i].stock; toast('Max stock reached', 'info'); }
     renderCart();
+    updateCardStates();
   }
 
-  function removeItem(i) { cart.splice(i, 1); renderCart(); }
+  function removeItem(i) { cart.splice(i, 1); renderCart(); updateCardStates(); }
 
   function updateTotals() {
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const cash  = parseFloat(document.getElementById('cash-tendered').value) || 0;
-    document.getElementById('subtotal').textContent    = `₱${total.toFixed(2)}`;
-    document.getElementById('total').textContent       = `₱${total.toFixed(2)}`;
-    document.getElementById('change-due').textContent  = `₱${Math.max(0, cash - total).toFixed(2)}`;
-    document.getElementById('process-btn').disabled    = cart.length === 0 || cash < total;
+    const totalQty = cart.reduce((s, i) => s + i.quantity, 0);
+
+    document.getElementById('subtotal').textContent   = `₱${total.toFixed(2)}`;
+    document.getElementById('total').textContent      = `₱${total.toFixed(2)}`;
+    document.getElementById('change-due').textContent = `₱${Math.max(0, cash - total).toFixed(2)}`;
+    document.getElementById('process-btn').disabled   = cart.length === 0 || cash < total;
+
+    document.getElementById('fab-count').textContent = totalQty === 1 ? '1 item' : `${totalQty} items`;
+    document.getElementById('fab-total').textContent = `₱${total.toFixed(2)}`;
   }
 
   document.getElementById('cash-tendered').addEventListener('input', updateTotals);
 
-  // Quick cash buttons
-  document.querySelectorAll('.quick-cash-btn').forEach(btn => {
+  document.querySelectorAll('.pos-quick-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('cash-tendered').value = btn.dataset.amount;
       updateTotals();
@@ -288,6 +334,7 @@
     cart = [];
     document.getElementById('cash-tendered').value = '';
     renderCart();
+    updateCardStates();
   });
 
   document.getElementById('process-btn').addEventListener('click', async () => {
@@ -307,8 +354,9 @@
       cart = [];
       document.getElementById('cash-tendered').value = '';
       renderCart();
+      updateCardStates();
       loadProducts();
-      switchTab('products');
+      closeCart();
       toast('Sale processed!', 'success');
     } catch (err) {
       toast(err.message, 'error');
@@ -317,6 +365,7 @@
     }
   });
 
+  // ── Receipt ────────────────────────────────────────────────────────────────
   function showReceipt(txn) {
     const el = document.getElementById('receipt-body');
     const items = txn.items || [];
@@ -327,13 +376,13 @@
         <small>Ref: ${txn.reference_no}</small>
       </div>
       <table style="width:100%;font-size:0.8rem;">
-        <thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead>
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
         <tbody>${items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>`).join('')}</tbody>
       </table>
       <div style="margin-top:12px;font-size:0.85rem;">
-        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem;margin-bottom:6px;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash</span><span>₱${parseFloat(txn.cash_tendered).toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:700;"><span>Change</span><span>₱${parseFloat(txn.change_due).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600;"><span>Change</span><span>₱${parseFloat(txn.change_due).toFixed(2)}</span></div>
       </div>
     `;
     document.getElementById('receipt-modal').removeAttribute('hidden');
@@ -346,7 +395,7 @@
     if (e.key === 'Escape') document.getElementById('receipt-modal').setAttribute('hidden', '');
   });
 
-  // Barcode search
+  // ── Barcode search ─────────────────────────────────────────────────────────
   document.getElementById('search').addEventListener('keydown', async e => {
     if (e.key === 'Enter') {
       const val = e.target.value.trim();
@@ -363,28 +412,69 @@
     }
   });
 
-  // Mobile tab switcher
-  const posLeft  = document.getElementById('pos-left');
-  const posRight = document.getElementById('pos-right');
+  // ── Mobile cart drawer ─────────────────────────────────────────────────────
+  const cartPanel  = document.getElementById('cart-panel');
+  const cartOverlay = document.getElementById('cart-overlay');
+  const cartFab    = document.getElementById('cart-fab');
 
-  function switchTab(tab) {
-    if (window.innerWidth > 768) return;
-    const toProducts = tab === 'products';
-    document.getElementById('tab-products').classList.toggle('active', toProducts);
-    document.getElementById('tab-cart').classList.toggle('active', !toProducts);
-    posLeft.style.display  = toProducts ? '' : 'none';
-    posRight.style.display = toProducts ? 'none' : '';
+  function openCart() {
+    cartPanel.classList.add('cart-open');
+    cartOverlay.classList.add('pos-cart-overlay--show');
+    document.body.style.overscrollBehaviorY = 'contain';
   }
 
-  document.getElementById('tab-products').addEventListener('click', () => switchTab('products'));
-  document.getElementById('tab-cart').addEventListener('click',     () => switchTab('cart'));
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) { posLeft.style.display = ''; posRight.style.display = ''; }
-  });
+  function closeCart() {
+    cartPanel.style.transform = '';
+    cartPanel.classList.remove('cart-open', 'cart-dragging');
+    cartOverlay.classList.remove('pos-cart-overlay--show');
+    document.body.style.overscrollBehaviorY = '';
+  }
 
+  cartFab.addEventListener('click', openCart);
+  cartOverlay.addEventListener('click', closeCart);
+  document.getElementById('close-cart-btn').addEventListener('click', closeCart);
+
+  // Swipe-to-dismiss
+  (function() {
+    const handle = document.getElementById('cart-handle');
+    let startY = 0, dragging = false;
+    const THRESHOLD = 120;
+
+    handle.addEventListener('touchstart', e => {
+      if (!cartPanel.classList.contains('cart-open')) return;
+      startY = e.touches[0].clientY;
+      dragging = true;
+      cartPanel.classList.add('cart-dragging');
+    }, { passive: true });
+
+    handle.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy < 0) return;
+      e.preventDefault();
+      cartPanel.style.transform = `translateY(${dy}px)`;
+      cartOverlay.style.opacity = 1 - Math.min(dy / THRESHOLD, 1) * 0.7;
+    }, { passive: false });
+
+    handle.addEventListener('touchend', e => {
+      if (!dragging) return;
+      dragging = false;
+      cartPanel.classList.remove('cart-dragging');
+      cartOverlay.style.opacity = '';
+      const dy = e.changedTouches[0].clientY - startY;
+      if (dy > THRESHOLD) {
+        cartPanel.style.transition = 'transform 0.25s ease';
+        cartPanel.style.transform = 'translateY(100%)';
+        setTimeout(closeCart, 260);
+      } else {
+        cartPanel.style.transform = '';
+      }
+    }, { passive: true });
+  })();
+
+  // ── Init ───────────────────────────────────────────────────────────────────
   loadCategories();
   loadProducts();
-  switchTab('products');
 </script>
 </body>
 </html>
