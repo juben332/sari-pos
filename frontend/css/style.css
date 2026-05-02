@@ -732,8 +732,8 @@ code {
   padding-top: 6px;
   border-top: 1px solid var(--gray-100);
 }
-.pos-product-card__price { font-size: 0.9rem; font-weight: 800; color: var(--primary); }
-.pos-product-card__stock { font-size: 0.65rem; color: var(--gray-400); text-align: right; }
+.pos-product-card__price { font-size: 0.9rem; font-weight: 800; color: var(--primary); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pos-product-card__stock { font-size: 0.65rem; color: var(--gray-400); text-align: right; white-space: nowrap; flex-shrink: 0; }
 .pos-product-card__stock.low { color: var(--red); font-weight: 700; }
 
 /* Cart overlay (mobile) */
