@@ -37,7 +37,7 @@
       <button class="topbar__menu-btn" id="sidebar-toggle"><i data-lucide="menu"></i></button>
       <span class="topbar__title">Point of Sale</span>
       <div class="topbar__spacer"></div>
-      <span id="clock" style="font-size:0.85rem;color:#6b7280;"></span>
+      <span id="clock" style="font-size:0.82rem;color:var(--gray-400);font-weight:500;"></span>
     </div>
 
     <!-- Mobile tab bar -->
@@ -46,50 +46,58 @@
       <button class="pos-tab" id="tab-cart">Cart <span class="pos-tab__badge" id="cart-badge" hidden>0</span></button>
     </div>
 
-    <div class="content pos-content">
-      <div class="pos-layout">
-        <!-- Products Panel -->
-        <div class="pos-products">
-          <div class="search-bar" style="margin-bottom:12px;">
-            <input type="text" id="search" class="form-control" placeholder="Search product or scan barcode..." />
-            <select id="category-filter" class="form-control" style="max-width:160px;">
-              <option value="">All Categories</option>
-            </select>
+    <div class="pos-page">
+      <!-- LEFT: Products -->
+      <div class="pos-left" id="pos-left">
+        <div class="pos-search">
+          <input type="text" id="search" class="form-control" placeholder="Search or scan barcode..." />
+        </div>
+        <div class="pos-cat-pills" id="cat-pills">
+          <button class="cat-pill active" data-cat="">All</button>
+        </div>
+        <div class="product-grid" id="product-grid">
+          <div class="empty-state">Loading products...</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Cart -->
+      <div class="pos-right" id="pos-right">
+        <div class="pos-cart-header">
+          <span class="pos-cart-title">Current Order</span>
+          <button class="btn btn--outline btn--sm" id="clear-btn">Clear</button>
+        </div>
+
+        <div class="pos-cart-items" id="cart-list">
+          <div class="cart-empty">Cart is empty</div>
+        </div>
+
+        <div class="pos-cart-totals">
+          <div class="pos-totals-row">
+            <span>Subtotal</span>
+            <span id="subtotal">₱0.00</span>
           </div>
-          <div class="product-grid" id="product-grid">
-            <div class="empty-state">Loading products...</div>
+          <div class="pos-totals-row pos-totals-total">
+            <span>TOTAL</span>
+            <span id="total">₱0.00</span>
           </div>
         </div>
 
-        <!-- Cart Panel -->
-        <div class="card pos-cart">
-          <div style="font-weight:700;margin-bottom:12px;font-size:1rem;">Current Order</div>
-          <div class="cart" id="cart-list">
-            <div class="empty-state" style="padding:24px;">No items yet</div>
+        <div class="pos-payment">
+          <label class="pos-payment-label">Amount Tendered</label>
+          <input type="number" id="cash-tendered" class="form-control" min="0" step="0.01" placeholder="0.00" />
+          <div class="quick-cash">
+            <button class="quick-cash-btn" data-amount="100">₱100</button>
+            <button class="quick-cash-btn" data-amount="200">₱200</button>
+            <button class="quick-cash-btn" data-amount="500">₱500</button>
+            <button class="quick-cash-btn" data-amount="1000">₱1000</button>
           </div>
-
-          <div class="cart-totals">
-            <div class="cart-totals__row total">
-              <span>TOTAL</span>
-              <span id="total">₱0.00</span>
-            </div>
-
-            <div style="margin-top:12px;">
-              <label class="form-label">Cash Tendered</label>
-              <input type="number" id="cash-tendered" class="form-control" min="0" step="0.01" placeholder="0.00" />
-            </div>
-            <div class="cart-totals__row" style="margin-top:8px;">
-              <span>Change</span>
-              <span id="change-due" style="color:#16a34a;font-weight:600;">₱0.00</span>
-            </div>
-
-            <button class="btn btn--success btn--lg" id="process-btn" style="width:100%;margin-top:16px;" disabled>
-              Process Sale
-            </button>
-            <button class="btn btn--outline btn--sm" id="clear-btn" style="width:100%;margin-top:8px;">
-              Clear Cart
-            </button>
+          <div class="pos-totals-row" style="margin-bottom:14px;">
+            <span>Change</span>
+            <span id="change-due" style="color:var(--green);font-weight:700;">₱0.00</span>
           </div>
+          <button class="btn btn--primary btn--lg" id="process-btn" style="width:100%;" disabled>
+            Process Payment
+          </button>
         </div>
       </div>
     </div>
@@ -119,31 +127,45 @@
 
   let cart = [];
   let products = [];
+  let activeCatId = '';
 
   // Clock
   setInterval(() => {
-    document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }, 1000);
 
-  // Load categories
+  // Load categories → render pills
   async function loadCategories() {
     const cats = await apiFetch('/categories').catch(() => []);
-    const sel = document.getElementById('category-filter');
+    const pills = document.getElementById('cat-pills');
     cats.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = c.name;
-      sel.appendChild(opt);
+      const btn = document.createElement('button');
+      btn.className = 'cat-pill';
+      btn.dataset.cat = c.id;
+      btn.textContent = c.name;
+      btn.addEventListener('click', () => selectCat(c.id, btn));
+      pills.appendChild(btn);
     });
   }
+
+  function selectCat(id, btn) {
+    activeCatId = id;
+    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    loadProducts();
+  }
+
+  document.querySelector('.cat-pill[data-cat=""]').addEventListener('click', function() {
+    selectCat('', this);
+  });
 
   // Load products
   async function loadProducts() {
     const search = document.getElementById('search').value.trim();
-    const catId  = document.getElementById('category-filter').value;
     const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (catId)  params.set('category_id', catId);
+    if (search)       params.set('search', search);
+    if (activeCatId)  params.set('category_id', activeCatId);
 
     const data = await apiFetch(`/products?${params}`).catch(() => []);
     products = data;
@@ -155,11 +177,12 @@
     if (!list.length) { grid.innerHTML = '<div class="empty-state">No products found</div>'; return; }
     grid.innerHTML = list.map(p => {
       const outOfStock = p.stock === 0;
-      const lowStock = !outOfStock && p.stock <= p.low_stock_threshold;
+      const lowStock   = !outOfStock && p.stock <= p.low_stock_threshold;
       const cls = outOfStock ? 'product-card--out' : lowStock ? 'product-card--low' : '';
       return `
         <div class="product-card ${cls}" data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
           <div class="product-card__name">${p.name}</div>
+          ${p.categories?.name ? `<div class="product-card__cat">${p.categories.name}</div>` : ''}
           <div class="product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
           <div class="product-card__stock">${outOfStock ? 'Out of stock' : `Stock: ${p.stock}`}</div>
         </div>
@@ -195,11 +218,14 @@
   function renderCart() {
     const list = document.getElementById('cart-list');
     if (!cart.length) {
-      list.innerHTML = '<div class="empty-state" style="padding:24px;">No items yet</div>';
+      list.innerHTML = '<div class="cart-empty">Cart is empty</div>';
     } else {
       list.innerHTML = cart.map((item, i) => `
         <div class="cart-item">
-          <div class="cart-item__name">${item.name}</div>
+          <div class="cart-item__info">
+            <div class="cart-item__name">${item.name}</div>
+            <div class="cart-item__unit">₱${item.price.toFixed(2)} each</div>
+          </div>
           <div class="cart-item__qty">
             <button data-action="dec" data-index="${i}">−</button>
             <span>${item.quantity}</span>
@@ -234,18 +260,28 @@
 
   function updateTotals() {
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const cash = parseFloat(document.getElementById('cash-tendered').value) || 0;
-
-    document.getElementById('total').textContent = `₱${total.toFixed(2)}`;
-    document.getElementById('change-due').textContent = `₱${Math.max(0, cash - total).toFixed(2)}`;
-    document.getElementById('process-btn').disabled = cart.length === 0 || cash < total;
+    const cash  = parseFloat(document.getElementById('cash-tendered').value) || 0;
+    document.getElementById('subtotal').textContent    = `₱${total.toFixed(2)}`;
+    document.getElementById('total').textContent       = `₱${total.toFixed(2)}`;
+    document.getElementById('change-due').textContent  = `₱${Math.max(0, cash - total).toFixed(2)}`;
+    document.getElementById('process-btn').disabled    = cart.length === 0 || cash < total;
   }
 
   document.getElementById('cash-tendered').addEventListener('input', updateTotals);
+
+  // Quick cash buttons
+  document.querySelectorAll('.quick-cash-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('cash-tendered').value = btn.dataset.amount;
+      updateTotals();
+    });
+  });
+
   document.getElementById('clear-btn').addEventListener('click', () => {
-    if (cart.length === 0) return;
+    if (!cart.length) return;
     if (!confirm('Clear all items from the cart?')) return;
     cart = [];
+    document.getElementById('cash-tendered').value = '';
     renderCart();
   });
 
@@ -272,7 +308,7 @@
     } catch (err) {
       toast(err.message, 'error');
       btn.disabled = false;
-      btn.textContent = 'Process Sale';
+      btn.textContent = 'Process Payment';
     }
   });
 
@@ -286,29 +322,27 @@
         <small>Ref: ${txn.reference_no}</small>
       </div>
       <table style="width:100%;font-size:0.8rem;">
-        <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+        <thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead>
         <tbody>${items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>`).join('')}</tbody>
       </table>
       <div style="margin-top:12px;font-size:0.85rem;">
-        <div style="display:flex;justify-content:space-between;font-weight:700;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem;margin-bottom:6px;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash</span><span>₱${parseFloat(txn.cash_tendered).toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600;"><span>Change</span><span>₱${parseFloat(txn.change_due).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:700;"><span>Change</span><span>₱${parseFloat(txn.change_due).toFixed(2)}</span></div>
       </div>
     `;
     document.getElementById('receipt-modal').removeAttribute('hidden');
   }
 
-  function closeReceipt() {
+  document.getElementById('close-receipt').addEventListener('click', () => {
     document.getElementById('receipt-modal').setAttribute('hidden', '');
-  }
-
-  document.getElementById('close-receipt').addEventListener('click', closeReceipt);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeReceipt();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('receipt-modal').setAttribute('hidden', '');
   });
 
-  // Barcode search (enter key)
-  document.getElementById('search').addEventListener('keydown', async (e) => {
+  // Barcode search
+  document.getElementById('search').addEventListener('keydown', async e => {
     if (e.key === 'Enter') {
       const val = e.target.value.trim();
       if (!val) return;
@@ -319,45 +353,30 @@
         loadProducts();
       } catch { loadProducts(); }
     } else {
-      clearTimeout(window._searchTimer);
-      window._searchTimer = setTimeout(loadProducts, 300);
+      clearTimeout(window._st);
+      window._st = setTimeout(loadProducts, 300);
     }
   });
 
-  document.getElementById('category-filter').addEventListener('change', loadProducts);
-
   // Mobile tab switcher
-  const tabProductsBtn = document.getElementById('tab-products');
-  const tabCartBtn     = document.getElementById('tab-cart');
-  const posProductsEl  = document.querySelector('.pos-products');
-  const posCartEl      = document.querySelector('.pos-cart');
+  const posLeft  = document.getElementById('pos-left');
+  const posRight = document.getElementById('pos-right');
 
   function switchTab(tab) {
     if (window.innerWidth > 768) return;
-    if (tab === 'cart') {
-      tabProductsBtn.classList.remove('active');
-      tabCartBtn.classList.add('active');
-      posProductsEl.style.display = 'none';
-      posCartEl.style.display = '';
-    } else {
-      tabCartBtn.classList.remove('active');
-      tabProductsBtn.classList.add('active');
-      posCartEl.style.display = 'none';
-      posProductsEl.style.display = '';
-    }
+    const toProducts = tab === 'products';
+    document.getElementById('tab-products').classList.toggle('active', toProducts);
+    document.getElementById('tab-cart').classList.toggle('active', !toProducts);
+    posLeft.style.display  = toProducts ? '' : 'none';
+    posRight.style.display = toProducts ? 'none' : '';
   }
 
-  tabProductsBtn.addEventListener('click', () => switchTab('products'));
-  tabCartBtn.addEventListener('click', () => switchTab('cart'));
-
+  document.getElementById('tab-products').addEventListener('click', () => switchTab('products'));
+  document.getElementById('tab-cart').addEventListener('click',     () => switchTab('cart'));
   window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) {
-      posProductsEl.style.display = '';
-      posCartEl.style.display = '';
-    }
+    if (window.innerWidth > 768) { posLeft.style.display = ''; posRight.style.display = ''; }
   });
 
-  // Init
   loadCategories();
   loadProducts();
 </script>
