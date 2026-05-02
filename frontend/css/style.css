@@ -589,7 +589,7 @@ code {
 ══════════════════════════════════════ */
 .pos-layout {
   display: flex;
-  height: calc(100vh - var(--nav-h));
+  height: calc(100dvh - var(--nav-h));
   overflow: hidden;
 }
 
@@ -1045,7 +1045,7 @@ code {
   .content { padding: 16px; }
 
   /* POS mobile: full-height products, cart as bottom drawer */
-  .pos-layout { height: calc(100dvh - var(--nav-h)); overflow: hidden; }
+  .pos-layout { height: calc(100dvh - var(--nav-h)); overflow: hidden; flex-direction: column; }
   .pos-left { height: 100%; border-right: none; }
 
   .pos-search-bar { padding: 10px 10px 8px; }
