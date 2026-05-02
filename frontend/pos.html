@@ -63,23 +63,6 @@
           </div>
 
           <div class="cart-totals">
-            <div class="cart-totals__row">
-              <span>Subtotal</span>
-              <span id="subtotal">₱0.00</span>
-            </div>
-            <div class="cart-totals__row">
-              <span>Discount</span>
-              <select id="discount-type" class="form-control" style="max-width:180px;padding:4px 8px;font-size:0.82rem;">
-                <option value="none">None</option>
-                <option value="senior">Senior Citizen (20%)</option>
-                <option value="pwd">PWD (20%)</option>
-                <option value="employee">Employee (10%)</option>
-              </select>
-            </div>
-            <div class="cart-totals__row" id="discount-row" hidden>
-              <span>Discount Amount</span>
-              <span id="discount-amount" style="color:#dc2626;"></span>
-            </div>
             <div class="cart-totals__row total">
               <span>TOTAL</span>
               <span id="total">₱0.00</span>
@@ -235,35 +218,15 @@
 
   function removeItem(i) { cart.splice(i, 1); renderCart(); }
 
-  function getDiscountRate() {
-    const type = document.getElementById('discount-type').value;
-    return type === 'senior' || type === 'pwd' ? 0.20 : type === 'employee' ? 0.10 : 0;
-  }
-
   function updateTotals() {
-    const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const rate = getDiscountRate();
-    const discountAmt = subtotal * rate;
-    const total = subtotal - discountAmt;
+    const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     const cash = parseFloat(document.getElementById('cash-tendered').value) || 0;
-    const change = cash - total;
 
-    document.getElementById('subtotal').textContent = `₱${subtotal.toFixed(2)}`;
     document.getElementById('total').textContent = `₱${total.toFixed(2)}`;
-    document.getElementById('change-due').textContent = `₱${Math.max(0, change).toFixed(2)}`;
-
-    const discountRow = document.getElementById('discount-row');
-    if (discountAmt > 0) {
-      discountRow.removeAttribute('hidden');
-      document.getElementById('discount-amount').textContent = `-₱${discountAmt.toFixed(2)}`;
-    } else {
-      discountRow.setAttribute('hidden', '');
-    }
-
+    document.getElementById('change-due').textContent = `₱${Math.max(0, cash - total).toFixed(2)}`;
     document.getElementById('process-btn').disabled = cart.length === 0 || cash < total;
   }
 
-  document.getElementById('discount-type').addEventListener('change', updateTotals);
   document.getElementById('cash-tendered').addEventListener('input', updateTotals);
   document.getElementById('clear-btn').addEventListener('click', () => {
     if (cart.length === 0) return;
@@ -281,14 +244,13 @@
         method: 'POST',
         body: {
           items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-          discount_type: document.getElementById('discount-type').value,
+          discount_type: 'none',
           cash_tendered: parseFloat(document.getElementById('cash-tendered').value),
         },
       });
       showReceipt(data);
       cart = [];
       document.getElementById('cash-tendered').value = '';
-      document.getElementById('discount-type').value = 'none';
       renderCart();
       loadProducts();
       toast('Sale processed!', 'success');
@@ -304,7 +266,7 @@
     const items = txn.items || [];
     el.innerHTML = `
       <div style="text-align:center;margin-bottom:12px;">
-        <strong>🛒 Sari POS</strong><br>
+        <strong>Sari POS</strong><br>
         <small>${new Date(txn.created_at).toLocaleString()}</small><br>
         <small>Ref: ${txn.reference_no}</small>
       </div>
@@ -313,9 +275,7 @@
         <tbody>${items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>`).join('')}</tbody>
       </table>
       <div style="margin-top:12px;font-size:0.85rem;">
-        <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>₱${parseFloat(txn.subtotal).toFixed(2)}</span></div>
-        ${txn.discount_amount > 0 ? `<div style="display:flex;justify-content:space-between;color:#dc2626;"><span>Discount</span><span>-₱${parseFloat(txn.discount_amount).toFixed(2)}</span></div>` : ''}
-        <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:6px;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;"><span>Cash</span><span>₱${parseFloat(txn.cash_tendered).toFixed(2)}</span></div>
         <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600;"><span>Change</span><span>₱${parseFloat(txn.change_due).toFixed(2)}</span></div>
       </div>

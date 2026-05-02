@@ -41,7 +41,7 @@
       <div class="page-header">
         <h1 class="page-title">Products</h1>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn--outline" id="low-stock-btn">⚠️ Low Stock</button>
+          <button class="btn btn--outline" id="low-stock-btn">Low Stock</button>
           <button class="btn btn--primary" id="add-product-btn">+ Add Product</button>
         </div>
       </div>
@@ -304,7 +304,7 @@
 
   document.getElementById('low-stock-btn').addEventListener('click', () => {
     showLowStockOnly = !showLowStockOnly;
-    document.getElementById('low-stock-btn').textContent = showLowStockOnly ? '📦 All Products' : '⚠️ Low Stock';
+    document.getElementById('low-stock-btn').textContent = showLowStockOnly ? 'All Products' : 'Low Stock';
     loadProducts();
   });
 

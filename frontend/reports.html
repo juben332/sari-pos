@@ -221,7 +221,7 @@
 
   function renderLowStock(items) {
     const tbody = document.getElementById('low-stock-tbody');
-    if (!items.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">All products well stocked ✅</td></tr>'; return; }
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">All products well stocked</td></tr>'; return; }
     tbody.innerHTML = items.map(p => {
       const badge = p.stock === 0 ? 'badge--red' : 'badge--amber';
       const label = p.stock === 0 ? 'Out of Stock' : 'Low Stock';
