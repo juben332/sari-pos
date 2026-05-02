@@ -178,13 +178,17 @@
     grid.innerHTML = list.map(p => {
       const outOfStock = p.stock === 0;
       const lowStock   = !outOfStock && p.stock <= p.low_stock_threshold;
-      const cls = outOfStock ? 'product-card--out' : lowStock ? 'product-card--low' : '';
+      const cartItem   = cart.find(i => i.product_id === p.id);
+      const inCart     = !!cartItem;
+      let cls = outOfStock ? 'product-card--out' : lowStock ? 'product-card--low' : '';
+      if (inCart) cls += ' product-card--in-cart';
       return `
         <div class="product-card ${cls}" data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
+          ${inCart ? `<span class="product-card__badge">${cartItem.quantity}</span>` : ''}
           <div class="product-card__name">${p.name}</div>
           ${p.categories?.name ? `<div class="product-card__cat">${p.categories.name}</div>` : ''}
           <div class="product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
-          <div class="product-card__stock">${outOfStock ? 'Out of stock' : `Stock: ${p.stock}`}</div>
+          <div class="product-card__stock">${outOfStock ? 'Out of stock' : `${p.stock} left`}</div>
         </div>
       `;
     }).join('');
@@ -247,6 +251,7 @@
     }
     updateTotals();
     updateCartBadge();
+    renderGrid(products);
   }
 
   function changeQty(i, delta) {
