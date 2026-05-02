@@ -953,6 +953,23 @@ code {
     border-radius: 0;
     box-shadow: none;
     border: none;
+    display: block; /* override flex so items flow naturally */
+  }
+
+  /* Let parent panel scroll — inner cart must not independently scroll */
+  .pos-cart .cart {
+    flex: none;
+    overflow: visible;
+    max-height: none;
+    margin-bottom: 0;
+  }
+
+  .pos-cart .cart-totals {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding-top: 12px;
+    margin-top: 8px;
   }
 
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
