@@ -40,7 +40,13 @@
       <span id="clock" style="font-size:0.85rem;color:#6b7280;"></span>
     </div>
 
-    <div class="content" style="height:calc(100vh - 56px);overflow:hidden;">
+    <!-- Mobile tab bar -->
+    <div class="pos-tabs" id="pos-tabs">
+      <button class="pos-tab active" id="tab-products">Products</button>
+      <button class="pos-tab" id="tab-cart">Cart <span class="pos-tab__badge" id="cart-badge" hidden>0</span></button>
+    </div>
+
+    <div class="content pos-content">
       <div class="pos-layout">
         <!-- Products Panel -->
         <div class="pos-products">
@@ -179,6 +185,13 @@
     renderCart();
   }
 
+  function updateCartBadge() {
+    const count = cart.reduce((s, i) => s + i.quantity, 0);
+    const badge = document.getElementById('cart-badge');
+    if (count > 0) { badge.textContent = count; badge.removeAttribute('hidden'); }
+    else badge.setAttribute('hidden', '');
+  }
+
   function renderCart() {
     const list = document.getElementById('cart-list');
     if (!cart.length) {
@@ -207,6 +220,7 @@
       });
     }
     updateTotals();
+    updateCartBadge();
   }
 
   function changeQty(i, delta) {
@@ -253,6 +267,7 @@
       document.getElementById('cash-tendered').value = '';
       renderCart();
       loadProducts();
+      switchTab('products');
       toast('Sale processed!', 'success');
     } catch (err) {
       toast(err.message, 'error');
@@ -310,6 +325,37 @@
   });
 
   document.getElementById('category-filter').addEventListener('change', loadProducts);
+
+  // Mobile tab switcher
+  const tabProductsBtn = document.getElementById('tab-products');
+  const tabCartBtn     = document.getElementById('tab-cart');
+  const posProductsEl  = document.querySelector('.pos-products');
+  const posCartEl      = document.querySelector('.pos-cart');
+
+  function switchTab(tab) {
+    if (window.innerWidth > 768) return;
+    if (tab === 'cart') {
+      tabProductsBtn.classList.remove('active');
+      tabCartBtn.classList.add('active');
+      posProductsEl.style.display = 'none';
+      posCartEl.style.display = '';
+    } else {
+      tabCartBtn.classList.remove('active');
+      tabProductsBtn.classList.add('active');
+      posCartEl.style.display = 'none';
+      posProductsEl.style.display = '';
+    }
+  }
+
+  tabProductsBtn.addEventListener('click', () => switchTab('products'));
+  tabCartBtn.addEventListener('click', () => switchTab('cart'));
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      posProductsEl.style.display = '';
+      posCartEl.style.display = '';
+    }
+  });
 
   // Init
   loadCategories();
