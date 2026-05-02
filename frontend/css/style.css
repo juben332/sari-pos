@@ -124,14 +124,27 @@ body {
   font-weight: 600;
 }
 
-.sidebar__link .icon {
+.sidebar__link svg,
+.sidebar__brand svg {
+  flex-shrink: 0;
+  stroke-width: 1.75;
+}
+
+.sidebar__link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar__brand svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+}
+
+.topbar__menu-btn svg {
   width: 20px;
   height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
+  stroke-width: 2;
 }
 
 .sidebar__divider {
@@ -755,6 +768,13 @@ code {
 }
 
 .login-card__logo { text-align: center; margin-bottom: 32px; }
+.login-card__logo h1 svg {
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+  vertical-align: middle;
+  margin-bottom: 4px;
+}
 .login-card__logo h1 {
   font-size: 1.7rem;
   font-weight: 800;

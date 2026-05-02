@@ -10,7 +10,7 @@
 <div class="login-page">
   <div class="login-card">
     <div class="login-card__logo">
-      <h1>🛒 Sari POS</h1>
+      <h1><i data-lucide="store"></i> Sari POS</h1>
       <p>Sari-Sari Store Point of Sale</p>
     </div>
     <form id="login-form" novalidate>
@@ -27,8 +27,10 @@
     </form>
   </div>
 </div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="/js/api.js"></script>
 <script>
+  lucide.createIcons();
   if (getUser() && getToken()) window.location.href = '/dashboard.html';
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {

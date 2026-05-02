@@ -10,19 +10,19 @@
 <div class="layout">
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <aside class="sidebar">
-    <div class="sidebar__brand">🛒 Sari POS</div>
+    <div class="sidebar__brand"><i data-lucide="store"></i> Sari POS</div>
     <nav class="sidebar__nav">
-      <a href="/dashboard.html"    class="sidebar__link" data-page="dashboard"><span class="icon">🏠</span> Dashboard</a>
-      <a href="/pos.html"          class="sidebar__link" data-page="pos"><span class="icon">🏪</span> POS / Sales</a>
-      <a href="/returns.html"      class="sidebar__link" data-page="returns"><span class="icon">↩️</span> Returns</a>
-      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><span class="icon">📋</span> Transactions</a>
+      <a href="/dashboard.html"    class="sidebar__link" data-page="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="/pos.html"          class="sidebar__link" data-page="pos"><i data-lucide="shopping-cart"></i> POS / Sales</a>
+      <a href="/returns.html"      class="sidebar__link" data-page="returns"><i data-lucide="corner-up-left"></i> Returns</a>
+      <a href="/transactions.html" class="sidebar__link" data-page="transactions"><i data-lucide="clipboard-list"></i> Transactions</a>
       <div data-admin hidden>
         <div class="sidebar__divider">Admin</div>
-        <a href="/inventory.html"       class="sidebar__link" data-page="inventory"><span class="icon">📦</span> Inventory</a>
-        <a href="/categories.html"      class="sidebar__link" data-page="categories"><span class="icon">🏷️</span> Categories</a>
-        <a href="/stock-movements.html" class="sidebar__link" data-page="stock-movements"><span class="icon">📈</span> Stock History</a>
-        <a href="/reports.html"         class="sidebar__link" data-page="reports"><span class="icon">📊</span> Reports</a>
-        <a href="/staff.html"           class="sidebar__link" data-page="staff"><span class="icon">👥</span> Staff</a>
+        <a href="/inventory.html"       class="sidebar__link" data-page="inventory"><i data-lucide="package"></i> Inventory</a>
+        <a href="/categories.html"      class="sidebar__link" data-page="categories"><i data-lucide="tag"></i> Categories</a>
+        <a href="/stock-movements.html" class="sidebar__link" data-page="stock-movements"><i data-lucide="trending-up"></i> Stock History</a>
+        <a href="/reports.html"         class="sidebar__link" data-page="reports"><i data-lucide="bar-chart-2"></i> Reports</a>
+        <a href="/staff.html"           class="sidebar__link" data-page="staff"><i data-lucide="users"></i> Staff</a>
       </div>
     </nav>
     <div class="sidebar__footer">
@@ -34,7 +34,7 @@
 
   <div class="main">
     <div class="topbar">
-      <button class="topbar__menu-btn" id="sidebar-toggle">☰</button>
+      <button class="topbar__menu-btn" id="sidebar-toggle"><i data-lucide="menu"></i></button>
       <span class="topbar__title">Point of Sale</span>
       <div class="topbar__spacer"></div>
       <span id="clock" style="font-size:0.85rem;color:#6b7280;"></span>
@@ -119,10 +119,12 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/toast.js"></script>
 <script src="/js/sidebar.js"></script>
 <script>
+  lucide.createIcons();
   const user = requireAuth();
   initSidebar('pos');
 
