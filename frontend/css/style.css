@@ -1044,22 +1044,24 @@ code {
 
   .pos-tabs { display: flex; }
 
-  /* On mobile, each panel fills the full POS page area */
+  /* On mobile, only one panel shows at a time via tab switcher */
   .pos-page {
     height: calc(100dvh - var(--nav-h) - 45px);
     flex-direction: column;
+    overflow: hidden;
   }
 
   .pos-left,
   .pos-right {
     width: 100%;
-    flex: 1;
+    height: 100%;
     border-left: none;
     border-top: none;
+    flex-shrink: 0;
   }
 
-  .pos-left  { padding: 12px; }
-  .pos-right { border-top: 1px solid var(--gray-200); }
+  .pos-left  { padding: 12px; overflow-y: auto; }
+  .pos-right { overflow-y: auto; }
 
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
 
