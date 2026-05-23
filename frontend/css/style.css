@@ -1019,7 +1019,7 @@ code {
 /* ══════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════ */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .pos-right { width: 320px; }
   .pos-product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
