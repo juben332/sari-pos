@@ -7,16 +7,8 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'https://sari-pos.vercel.app')
-  .split(',').map(s => s.trim());
-
 app.use(helmet());
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-    else cb(new Error('Not allowed by CORS'));
-  },
-}));
+app.use(cors({ origin: process.env.FRONTEND_URL || true }));
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
