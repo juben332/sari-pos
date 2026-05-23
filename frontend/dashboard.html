@@ -176,8 +176,8 @@
       return `<div class="activity-item">
         <div class="activity-icon activity-icon--${isVoid ? 'void' : 'sale'}">${isVoid ? '✕' : '✓'}</div>
         <div class="activity-meta">
-          <strong>${t.reference_no}</strong>
-          <span>${t.profiles?.full_name || 'Cashier'} · ${new Date(t.created_at).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}</span>
+          <strong>${escHtml(t.reference_no)}</strong>
+          <span>${escHtml(t.profiles?.full_name || 'Cashier')} · ${new Date(t.created_at).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}</span>
         </div>
         <div class="activity-amount ${isVoid ? 'activity-amount--void' : ''}">
           ${isVoid ? '—' : fmt(t.total)}
@@ -194,7 +194,7 @@
       const color = p.stock === 0 ? 'var(--red)' : 'var(--amber)';
       return `<div style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-          <span style="font-size:0.83rem;font-weight:600;color:var(--gray-800);">${p.name}</span>
+          <span style="font-size:0.83rem;font-weight:600;color:var(--gray-800);">${escHtml(p.name)}</span>
           <span style="font-size:0.78rem;font-weight:700;color:${color};">${p.stock} / ${p.low_stock_threshold}</span>
         </div>
         <div class="stock-bar-wrap">

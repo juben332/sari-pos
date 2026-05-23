@@ -114,7 +114,7 @@
 
     tbody.innerHTML = cats.map(c => `
       <tr>
-        <td><strong>${c.name}</strong></td>
+        <td><strong>${escHtml(c.name)}</strong></td>
         <td><span class="badge badge--blue">${countMap[c.id] || 0} products</span></td>
         <td style="color:var(--gray-400);font-size:0.82rem;">${new Date(c.created_at).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' })}</td>
         <td>

@@ -187,9 +187,9 @@
 
     tbody.innerHTML = data.map(p => `
       <tr>
-        <td><strong>${p.name}</strong></td>
-        <td>${p.categories?.name || '—'}</td>
-        <td>${p.barcode || '—'}</td>
+        <td><strong>${escHtml(p.name)}</strong></td>
+        <td>${escHtml(p.categories?.name || '—')}</td>
+        <td>${escHtml(p.barcode || '—')}</td>
         <td>₱${parseFloat(p.price).toFixed(2)}</td>
         <td>₱${parseFloat(p.cost_price).toFixed(2)}</td>
         <td>

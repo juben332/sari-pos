@@ -111,10 +111,10 @@
     tbody.innerHTML = res.data.map(t => `
       <tr>
         <td>${new Date(t.created_at).toLocaleString()}</td>
-        <td><code>${t.reference_no}</code></td>
-        <td>${t.profiles?.full_name || '—'}</td>
+        <td><code>${escHtml(t.reference_no)}</code></td>
+        <td>${escHtml(t.profiles?.full_name || '—')}</td>
         <td>₱${parseFloat(t.subtotal).toFixed(2)}</td>
-        <td>${t.discount_type !== 'none' ? `${t.discount_type} (-₱${parseFloat(t.discount_amount).toFixed(2)})` : '—'}</td>
+        <td>${t.discount_type !== 'none' ? `${escHtml(t.discount_type)} (-₱${parseFloat(t.discount_amount).toFixed(2)})` : '—'}</td>
         <td><strong>₱${parseFloat(t.total).toFixed(2)}</strong></td>
         <td>₱${parseFloat(t.cash_tendered).toFixed(2)}</td>
         <td>₱${parseFloat(t.change_due).toFixed(2)}</td>

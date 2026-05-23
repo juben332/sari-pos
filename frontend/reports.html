@@ -204,7 +204,7 @@
       const pct = totalSales > 0 ? ((p.revenue / totalSales) * 100).toFixed(1) : '0.0';
       return `<tr>
         <td><strong style="color:var(--gray-400);">${i + 1}</strong></td>
-        <td><strong>${p.product_name}</strong></td>
+        <td><strong>${escHtml(p.product_name)}</strong></td>
         <td>${p.qty_sold}</td>
         <td style="color:var(--green);font-weight:700;">${fmt(p.revenue)}</td>
         <td>
@@ -226,7 +226,7 @@
       const badge = p.stock === 0 ? 'badge--red' : 'badge--amber';
       const label = p.stock === 0 ? 'Out of Stock' : 'Low Stock';
       return `<tr>
-        <td><strong>${p.name}</strong></td>
+        <td><strong>${escHtml(p.name)}</strong></td>
         <td>${p.stock}</td>
         <td>${p.low_stock_threshold}</td>
         <td><span class="badge ${badge}">${label}</span></td>

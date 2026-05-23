@@ -206,10 +206,10 @@
         <div class="pos-product-card ${inCart ? 'pos-product-card--in-cart' : ''} ${outOfStock ? 'pos-product-card--out' : ''}"
              data-product-id="${p.id}" ${outOfStock ? 'aria-disabled="true"' : ''}>
           <div class="pos-product-card__header">
-            <div class="pos-product-card__name">${p.name}</div>
+            <div class="pos-product-card__name">${escHtml(p.name)}</div>
             ${inCart ? `<div class="pos-product-card__badge">${cartItem.quantity}</div>` : ''}
           </div>
-          ${p.categories?.name ? `<div class="pos-product-card__cat">${p.categories.name}</div>` : ''}
+          ${p.categories?.name ? `<div class="pos-product-card__cat">${escHtml(p.categories.name)}</div>` : ''}
           <div class="pos-product-card__footer">
             <div class="pos-product-card__price">₱${parseFloat(p.price).toFixed(2)}</div>
             <div class="pos-product-card__stock ${isLow ? 'low' : ''}">${outOfStock ? 'Out of stock' : `${p.stock} left`}</div>
