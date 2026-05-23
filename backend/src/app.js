@@ -7,8 +7,8 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || true }));
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors());
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
