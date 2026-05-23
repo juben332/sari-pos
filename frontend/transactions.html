@@ -176,7 +176,7 @@
       <table style="width:100%;font-size:0.85rem;">
         <thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
         <tbody>${(txn.transaction_items || []).map(i => `
-          <tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.unit_price).toFixed(2)}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>
+          <tr><td>${escHtml(i.product_name)}</td><td>${i.quantity}</td><td>₱${parseFloat(i.unit_price).toFixed(2)}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>
         `).join('')}</tbody>
       </table>
       <div style="margin-top:12px;text-align:right;">

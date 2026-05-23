@@ -9,7 +9,10 @@ function toast(message, type = 'info', duration = 3500) {
   el.className = `toast toast--${type}`;
 
   const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
-  el.innerHTML = `<span style="font-size:1rem;opacity:0.9;">${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+  el.innerHTML = `<span style="font-size:1rem;opacity:0.9;">${icons[type] || 'ℹ'}</span>`;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = message;
+  el.appendChild(msgSpan);
 
   container.appendChild(el);
 

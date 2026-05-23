@@ -10,7 +10,6 @@ const list = async (req, res) => {
 
   if (category_id) query = query.eq('category_id', category_id);
   if (search) query = query.ilike('name', `%${search}%`);
-  if (low_stock === 'true') query = query.lte('stock', adminClient.raw('low_stock_threshold'));
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });

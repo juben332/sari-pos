@@ -207,6 +207,9 @@
     document.getElementById('step-2').setAttribute('hidden','');
     document.getElementById('step-1').removeAttribute('hidden');
     document.getElementById('return-modal').removeAttribute('hidden');
+    document.getElementById('return-reason').value = '';
+    document.getElementById('refund-method').selectedIndex = 0;
+    document.getElementById('return-notes').value = '';
   });
 
   document.getElementById('close-return-modal').addEventListener('click', closeReturnModal);
@@ -216,9 +219,11 @@
     if (!val) return;
 
     try {
-      const res = await apiFetch('/transactions?limit=100');
-      let txn = res.data.find(t => t.reference_no === val || t.id === val);
-      if (!txn) {
+      let txn = null;
+      const res = await apiFetch(`/transactions?reference_no=${encodeURIComponent(val)}&limit=1`);
+      if (res.data?.length) {
+        txn = res.data[0];
+      } else {
         txn = await apiFetch(`/transactions/${val}`).catch(() => null);
       }
       if (!txn) { toast('Transaction not found', 'error'); return; }
@@ -239,7 +244,7 @@
         <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
           <input type="checkbox" id="ri-${item.id}" data-item-id="${item.id}" data-max="${item.quantity}" />
           <div style="flex:1;">
-            <div style="font-weight:600;font-size:0.85rem;">${item.product_name}</div>
+            <div style="font-weight:600;font-size:0.85rem;">${escHtml(item.product_name)}</div>
             <div style="font-size:0.75rem;color:#6b7280;">₱${parseFloat(item.unit_price).toFixed(2)} × ${item.quantity}</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">

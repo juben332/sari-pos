@@ -60,6 +60,14 @@ async function tryRefresh() {
   } catch { return false; }
 }
 
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function requireAuth(requiredRole) {
   const user = getUser();
   if (!user || !getToken()) {

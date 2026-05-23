@@ -380,7 +380,7 @@
       </div>
       <table style="width:100%;font-size:0.8rem;">
         <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
-        <tbody>${items.map(i => `<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>`).join('')}</tbody>
+        <tbody>${items.map(i => `<tr><td>${escHtml(i.product_name)}</td><td>${i.quantity}</td><td>₱${parseFloat(i.subtotal).toFixed(2)}</td></tr>`).join('')}</tbody>
       </table>
       <div style="margin-top:12px;font-size:0.85rem;">
         <div style="display:flex;justify-content:space-between;font-weight:700;"><span>TOTAL</span><span>₱${parseFloat(txn.total).toFixed(2)}</span></div>
